@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
 import { createClient } from '@/libs/supabase/server';
+import HeaderSimple from '@/components/HeaderSimple';
 import type { ProcessedImageResponse } from '@/features/backgroundRemover/types/image';
 
 interface PageProps {
@@ -86,6 +87,8 @@ export default async function HostImagePage({ params }: PageProps) {
 
   return (
     <div className="min-h-screen bg-base-100">
+      <HeaderSimple />
+
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
