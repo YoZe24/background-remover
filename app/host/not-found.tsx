@@ -1,8 +1,12 @@
 import Link from 'next/link';
+import HeaderSimple from '@/components/HeaderSimple';
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-base-100 to-base-200 flex items-center justify-center">
+    <div className="min-h-screen bg-base-100">
+      <HeaderSimple />
+
+      <div className="flex-1 flex items-center justify-center">
       <div className="text-center px-4">
         <div className="w-20 h-20 mx-auto mb-6 text-base-content/20">
           <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -23,6 +27,7 @@ export default function NotFound() {
         <Link href="/" className="btn btn-primary shadow-lg hover:shadow-xl transition-all duration-200">
           Back to Home
         </Link>
+      </div>
       </div>
     </div>
   );
