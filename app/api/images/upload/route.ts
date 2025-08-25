@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { v4 as uuidv4 } from 'uuid';
+import { createClient } from '@/libs/supabase/server';
+import { ImageProcessor } from '@/features/backgroundRemover/libs/image-processor';
+import { BackgroundRemovalService } from '@/features/backgroundRemover/libs/background-removal';
+import type { ProcessedImage } from '@/features/backgroundRemover/types/image';
+
+// Configure maximum file size for uploads (50MB)
+export const maxDuration = 30; // 30 seconds max execution time
+
+export async function POST(request: NextRequest) {
+  try {
+    const formData = await request.formData();
+    const file = formData.get('file') as File;
+    const sessionId = formData.get('sessionId') as string || uuidv4();
+
+    // Validate file presence
+    if (!file) {
+      return NextResponse.json(
+        { error: 'No file provided' },
+        { status: 400 }
+      );
+    }
+
+    // Initialize services
+    const imageProcessor = new ImageProcessor();
+    const backgroundRemoval = new BackgroundRemovalService();
+
+    // Validate file
+    const validation = imageProcessor.validateFile(file);
+    if (!validation.valid) {
+      return NextResponse.json(
+        { error: validation.error },
+        { status: 400 }
+      );
+    }
+
+    // Validate background removal service
+    const serviceValidation = backgroundRemoval.validateConfig();
+    if (!serviceValidation.valid) {
+      return NextResponse.json(
+        { error: `Service configuration error: ${serviceValidation.errors.join(', ')}` },
+        { status: 500 }
+      );
+    }
+
+    // Convert file to buffer
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    // Get image metadata
+    const metadata = await imageProcessor.getImageMetadata(buffer);
+
+    // Upload original image to storage
+    const { url: originalUrl, path: originalPath } = await imageProcessor.uploadToStorage(
+      buffer,
+      file.name,
+      'original-images'
+    );
+
+    // Create database record
+    const supabase = await createClient();
+    const imageRecord: Omit<ProcessedImage, 'id' | 'created_at' | 'updated_at'> = {
+      original_filename: file.name,
+      original_url: originalUrl,
+      processed_url: null,
+      status: 'pending',
+      error_message: null,
+      file_size: file.size,
+      dimensions: {
+        width: metadata.width,
+        height: metadata.height,
+      },
+      processing_time_ms: null,
+      user_session_id: sessionId,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    };
+
+    const { data, error } = await supabase
+      .from('processed_images')
+      .insert(imageRecord)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database insert error:', error);
+      // Cleanup uploaded file
+      await imageProcessor.deleteFromStorage(originalPath, 'original-images');
+      
+      return NextResponse.json(
+        { error: 'Failed to create image record' },
+        { status: 500 }
+      );
+    }
+
+    // Start background processing (fire and forget)
+    processImageInBackground(data.id, buffer, imageProcessor, backgroundRemoval);
+
+    // Return immediate response with tracking ID
+    return NextResponse.json({
+      id: data.id,
+      status: 'pending',
+      message: 'Image uploaded successfully. Processing started.',
+      originalUrl,
+      sessionId,
+    });
+
+  } catch (error) {
+    console.error('Upload error:', error);
+    return NextResponse.json(
+      { 
+        error: error instanceof Error ? error.message : 'Failed to upload image'
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Process image in background (async)
+ */
+async function processImageInBackground(
+  imageId: string,
+  originalBuffer: Buffer,
+  imageProcessor: ImageProcessor,
+  backgroundRemoval: BackgroundRemovalService
+) {
+  try {
+    console.log(`🎨 Starting background processing for image ${imageId}`);
+    
+    await imageProcessor.processImage(
+      originalBuffer,
+      imageId,
+      (buffer) => backgroundRemoval.removeBackground(buffer)
+    );
+
+    console.log(`✅ Successfully processed image ${imageId}`);
+  } catch (error) {
+    console.error(`❌ Failed to process image ${imageId}:`, error);
+    // Error handling is done within processImage method
+  }
+}

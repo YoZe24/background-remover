@@ -19,6 +19,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: 'logos-world.net',
       },
+      {
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
     ],
   },
   webpack: (config, { webpack, isServer }) => {
