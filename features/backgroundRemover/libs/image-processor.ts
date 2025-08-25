@@ -62,30 +62,53 @@ export class ImageProcessor {
    * Resize image if it exceeds max dimensions
    */
   async resizeIfNeeded(buffer: Buffer): Promise<Buffer> {
-    const metadata = await sharp(buffer).metadata();
-    const { width = 0, height = 0 } = metadata;
-    const { maxDimensions } = this.config;
+    console.log(`🔍 [ImageProcessor] Starting resize check - buffer size: ${buffer.length}`);
+    
+    try {
+      console.log(`🔍 [ImageProcessor] Getting metadata...`);
+      const metadata = await sharp(buffer).metadata();
+      console.log(`🔍 [ImageProcessor] Metadata retrieved:`, { 
+        width: metadata.width, 
+        height: metadata.height, 
+        format: metadata.format 
+      });
+      
+      const { width = 0, height = 0 } = metadata;
+      const { maxDimensions } = this.config;
 
-    if (width <= maxDimensions.width && height <= maxDimensions.height) {
-      return buffer;
+      if (width <= maxDimensions.width && height <= maxDimensions.height) {
+        console.log(`✅ [ImageProcessor] No resize needed (${width}x${height} <= ${maxDimensions.width}x${maxDimensions.height})`);
+        return buffer;
+      }
+
+      console.log(`🔄 [ImageProcessor] Resizing needed from ${width}x${height} to max ${maxDimensions.width}x${maxDimensions.height}`);
+      
+      // Calculate new dimensions maintaining aspect ratio
+      const aspectRatio = width / height;
+      let newWidth = maxDimensions.width;
+      let newHeight = Math.round(newWidth / aspectRatio);
+
+      if (newHeight > maxDimensions.height) {
+        newHeight = maxDimensions.height;
+        newWidth = Math.round(newHeight * aspectRatio);
+      }
+
+      console.log(`🔄 [ImageProcessor] Calculated new dimensions: ${newWidth}x${newHeight}`);
+      console.log(`🔄 [ImageProcessor] Starting Sharp resize operation...`);
+      
+      const result = await sharp(buffer)
+        .resize(newWidth, newHeight, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .toBuffer();
+        
+      console.log(`✅ [ImageProcessor] Resize completed - new buffer size: ${result.length}`);
+      return result;
+    } catch (error) {
+      console.error(`❌ [ImageProcessor] Resize failed:`, error);
+      throw error;
     }
-
-    // Calculate new dimensions maintaining aspect ratio
-    const aspectRatio = width / height;
-    let newWidth = maxDimensions.width;
-    let newHeight = Math.round(newWidth / aspectRatio);
-
-    if (newHeight > maxDimensions.height) {
-      newHeight = maxDimensions.height;
-      newWidth = Math.round(newHeight * aspectRatio);
-    }
-
-    return await sharp(buffer)
-      .resize(newWidth, newHeight, {
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .toBuffer();
   }
 
   /**
@@ -175,7 +198,7 @@ export class ImageProcessor {
       console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
       
       // Add timeout to the database operation
-      const updatePromise = supabase
+      const updatePromise = await supabase
         .from('processed_images')
         .update({
           status,
@@ -227,7 +250,23 @@ export class ImageProcessor {
       // Step 1: Resize if needed
       console.log(`📏 [ImageProcessor] Step 1: Resizing if needed for ${imageId}`);
       const resizeStart = Date.now();
-      const resizedBuffer = await this.resizeIfNeeded(originalBuffer);
+      
+      // Add memory logging
+      const memUsageBefore = process.memoryUsage();
+      console.log(`💾 [ImageProcessor] Memory before resize: ${Math.round(memUsageBefore.heapUsed / 1024 / 1024)}MB heap, ${Math.round(memUsageBefore.rss / 1024 / 1024)}MB RSS`);
+      
+      // Add timeout to resize operation
+      const resizePromise = this.resizeIfNeeded(originalBuffer);
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Resize operation timed out after 30 seconds for ${imageId}`));
+        }, 30000);
+      });
+      
+      const resizedBuffer = await Promise.race([resizePromise, timeoutPromise]) as Buffer;
+      
+      const memUsageAfter = process.memoryUsage();
+      console.log(`💾 [ImageProcessor] Memory after resize: ${Math.round(memUsageAfter.heapUsed / 1024 / 1024)}MB heap, ${Math.round(memUsageAfter.rss / 1024 / 1024)}MB RSS`);
       console.log(`📏 [ImageProcessor] Resize completed for ${imageId} in ${Date.now() - resizeStart}ms (${originalBuffer.length} -> ${resizedBuffer.length} bytes)`);
 
       // Step 2: Remove background

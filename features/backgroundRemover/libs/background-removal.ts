@@ -127,7 +127,13 @@ export class BackgroundRemovalService {
   private async mockBackgroundRemoval(imageBuffer: Buffer): Promise<Buffer> {
     // In development, just return the original image
     // In a real implementation, you might apply some basic image processing
-    console.log('⚠️  Using mock background removal - no actual processing');
+    console.log('⚠️  [Mock] Starting mock background removal');
+    console.log(`⚠️  [Mock] Input buffer size: ${imageBuffer.length} bytes`);
+    
+    // Add a small delay to simulate processing
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    console.log('✅ [Mock] Mock background removal completed successfully');
     return imageBuffer;
   }
 
