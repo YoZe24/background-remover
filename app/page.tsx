@@ -5,6 +5,8 @@ import { v4 as uuidv4 } from 'uuid';
 import { Toaster } from 'react-hot-toast';
 import ImageUpload from '@/features/backgroundRemover/components/ImageUpload';
 import ImageResult from '@/features/backgroundRemover/components/ImageResult';
+import SampleImages from '@/features/backgroundRemover/components/SampleImages';
+import { useImageUpload } from '@/features/backgroundRemover/hooks/useImageUpload';
 
 interface UploadedImage {
   id: string;
@@ -39,6 +41,13 @@ export default function Page() {
   const handleImageDelete = (imageId: string) => {
     setUploadedImages(prev => prev.filter(img => img.id !== imageId));
   };
+
+  // Use the shared upload hook
+  const { uploadFile, isUploading } = useImageUpload({
+    sessionId,
+    onUploadSuccess: handleUploadSuccess,
+    onUploadError: handleUploadError,
+  });
 
   return (
     <>
@@ -126,11 +135,17 @@ export default function Page() {
 
         {/* Upload Section */}
         <section className="py-8 px-4">
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-4xl mx-auto space-y-8">
             <ImageUpload
               onUploadSuccess={handleUploadSuccess}
               onUploadError={handleUploadError}
               sessionId={sessionId}
+              disabled={isUploading}
+            />
+            
+            <SampleImages
+              onSampleSelect={uploadFile}
+              disabled={isUploading}
             />
           </div>
         </section>
