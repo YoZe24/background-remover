@@ -192,43 +192,64 @@ export class ImageProcessor {
     removeBackgroundFn: (buffer: Buffer) => Promise<Buffer>
   ): Promise<{ processedUrl: string; processingTimeMs: number }> {
     const startTime = Date.now();
+    console.log(`🔄 [ImageProcessor] Starting processing pipeline for ${imageId}`);
 
     try {
       // Update status to processing
+      console.log(`📝 [ImageProcessor] Updating status to 'processing' for ${imageId}`);
       await this.updateProcessingStatus(imageId, 'processing');
 
       // Step 1: Resize if needed
+      console.log(`📏 [ImageProcessor] Step 1: Resizing if needed for ${imageId}`);
+      const resizeStart = Date.now();
       const resizedBuffer = await this.resizeIfNeeded(originalBuffer);
+      console.log(`📏 [ImageProcessor] Resize completed for ${imageId} in ${Date.now() - resizeStart}ms (${originalBuffer.length} -> ${resizedBuffer.length} bytes)`);
 
       // Step 2: Remove background
+      console.log(`🎭 [ImageProcessor] Step 2: Removing background for ${imageId}`);
+      const bgRemovalStart = Date.now();
       const noBgBuffer = await removeBackgroundFn(resizedBuffer);
+      console.log(`🎭 [ImageProcessor] Background removal completed for ${imageId} in ${Date.now() - bgRemovalStart}ms (${resizedBuffer.length} -> ${noBgBuffer.length} bytes)`);
 
       // Step 3: Flip horizontally
+      console.log(`🔄 [ImageProcessor] Step 3: Flipping horizontally for ${imageId}`);
+      const flipStart = Date.now();
       const flippedBuffer = await this.flipHorizontally(noBgBuffer);
+      console.log(`🔄 [ImageProcessor] Flip completed for ${imageId} in ${Date.now() - flipStart}ms`);
 
       // Step 4: Convert to output format
+      console.log(`🔧 [ImageProcessor] Step 4: Converting to output format for ${imageId}`);
+      const convertStart = Date.now();
       const finalBuffer = await this.convertToOutputFormat(flippedBuffer);
+      console.log(`🔧 [ImageProcessor] Format conversion completed for ${imageId} in ${Date.now() - convertStart}ms`);
 
       // Step 5: Upload processed image
+      console.log(`☁️ [ImageProcessor] Step 5: Uploading processed image for ${imageId}`);
+      const uploadStart = Date.now();
       const { url: processedUrl } = await this.uploadToStorage(
         finalBuffer,
         `processed-${imageId}`,
         'processed-images'
       );
+      console.log(`☁️ [ImageProcessor] Upload completed for ${imageId} in ${Date.now() - uploadStart}ms`);
 
       const processingTimeMs = Date.now() - startTime;
 
       // Step 6: Update status to completed
+      console.log(`✅ [ImageProcessor] Step 6: Updating status to 'completed' for ${imageId}`);
       await this.updateProcessingStatus(imageId, 'completed', {
         processed_url: processedUrl,
         processing_time_ms: processingTimeMs,
       });
 
+      console.log(`🎉 [ImageProcessor] Complete pipeline finished for ${imageId} in ${processingTimeMs}ms`);
       return { processedUrl, processingTimeMs };
     } catch (error) {
       const processingTimeMs = Date.now() - startTime;
+      console.error(`❌ [ImageProcessor] Pipeline failed for ${imageId} after ${processingTimeMs}ms:`, error);
       
       // Update status to failed
+      console.log(`💥 [ImageProcessor] Updating status to 'failed' for ${imageId}`);
       await this.updateProcessingStatus(imageId, 'failed', {
         error_message: error instanceof Error ? error.message : 'Unknown error',
         processing_time_ms: processingTimeMs,

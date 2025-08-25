@@ -124,18 +124,38 @@ async function processImageInBackground(
   imageProcessor: ImageProcessor,
   backgroundRemoval: BackgroundRemovalService
 ) {
+  const startTime = Date.now();
+  console.log(`🎨 [Upload] Starting background processing for image ${imageId} (buffer size: ${originalBuffer.length} bytes)`);
+  
   try {
-    console.log(`🎨 Starting background processing for image ${imageId}`);
+    // Log service configuration
+    const serviceInfo = backgroundRemoval.getServiceInfo();
+    console.log(`🔧 [Upload] Service config for ${imageId}:`, serviceInfo);
     
     await imageProcessor.processImage(
       originalBuffer,
       imageId,
-      (buffer) => backgroundRemoval.removeBackground(buffer)
+      (buffer) => {
+        console.log(`🔄 [Upload] Calling background removal for ${imageId}...`);
+        return backgroundRemoval.removeBackground(buffer);
+      }
     );
 
-    console.log(`✅ Successfully processed image ${imageId}`);
+    const totalTime = Date.now() - startTime;
+    console.log(`✅ [Upload] Successfully processed image ${imageId} in ${totalTime}ms`);
   } catch (error) {
-    console.error(`❌ Failed to process image ${imageId}:`, error);
+    const totalTime = Date.now() - startTime;
+    console.error(`❌ [Upload] Failed to process image ${imageId} after ${totalTime}ms:`, error);
+    
+    // Additional error context
+    if (error instanceof Error) {
+      console.error(`❌ [Upload] Error details for ${imageId}:`, {
+        name: error.name,
+        message: error.message,
+        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
+    }
+    
     // Error handling is done within processImage method
   }
 }

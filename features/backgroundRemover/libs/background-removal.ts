@@ -19,39 +19,78 @@ export class BackgroundRemovalService {
    * Remove background using Remove.bg API
    */
   private async removeBackgroundWithRemoveBg(imageBuffer: Buffer): Promise<Buffer> {
+    const startTime = Date.now();
+    console.log(`🔄 [Remove.bg] Starting background removal (buffer size: ${imageBuffer.length} bytes)`);
+    
     if (!this.config.apiKey) {
+      console.error('❌ [Remove.bg] API key not configured');
       throw new Error('Remove.bg API key is not configured');
     }
 
-    const formData = new FormData();
-    const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/png' });
-    formData.append('image_file', blob);
-    formData.append('size', this.config.quality || 'auto');
+    try {
+      const formData = new FormData();
+      const blob = new Blob([new Uint8Array(imageBuffer)], { type: 'image/png' });
+      formData.append('image_file', blob);
+      formData.append('size', this.config.quality || 'auto');
 
-    const response = await fetch('https://api.remove.bg/v1.0/removebg', {
-      method: 'POST',
-      headers: {
-        'X-Api-Key': this.config.apiKey,
-      },
-      body: formData,
-    });
+      console.log(`📤 [Remove.bg] Sending request with quality: ${this.config.quality || 'auto'}`);
 
-    if (!response.ok) {
-      let errorMessage = `Remove.bg API error: ${response.status}`;
+      // Add timeout control using AbortController
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        console.error('⏰ [Remove.bg] Request timeout after 60 seconds');
+        controller.abort();
+      }, 60000); // 60 second timeout
+
+      const response = await fetch('https://api.remove.bg/v1.0/removebg', {
+        method: 'POST',
+        headers: {
+          'X-Api-Key': this.config.apiKey,
+        },
+        body: formData,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
       
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.errors?.[0]?.title || errorMessage;
-      } catch {
-        // Fallback to status text if JSON parsing fails
-        errorMessage = `${errorMessage} - ${response.statusText}`;
+      const requestTime = Date.now() - startTime;
+      console.log(`📥 [Remove.bg] Response received (${response.status}) after ${requestTime}ms`);
+
+      if (!response.ok) {
+        let errorMessage = `Remove.bg API error: ${response.status}`;
+        
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.errors?.[0]?.title || errorMessage;
+          console.error(`❌ [Remove.bg] API error details:`, errorData);
+        } catch {
+          // Fallback to status text if JSON parsing fails
+          errorMessage = `${errorMessage} - ${response.statusText}`;
+          console.error(`❌ [Remove.bg] Failed to parse error response`);
+        }
+        
+        throw new Error(errorMessage);
+      }
+
+      console.log(`🔄 [Remove.bg] Converting response to buffer...`);
+      const arrayBuffer = await response.arrayBuffer();
+      const resultBuffer = Buffer.from(arrayBuffer);
+      
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ [Remove.bg] Successfully completed in ${totalTime}ms (result size: ${resultBuffer.length} bytes)`);
+      
+      return resultBuffer;
+    } catch (error) {
+      const totalTime = Date.now() - startTime;
+      
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error(`⏰ [Remove.bg] Request aborted due to timeout after ${totalTime}ms`);
+        throw new Error('Remove.bg request timed out after 60 seconds');
       }
       
-      throw new Error(errorMessage);
+      console.error(`❌ [Remove.bg] Error after ${totalTime}ms:`, error);
+      throw error;
     }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
   }
 
   /**
@@ -96,13 +135,18 @@ export class BackgroundRemovalService {
    * Remove background from image buffer
    */
   async removeBackground(imageBuffer: Buffer): Promise<Buffer> {
+    const serviceInfo = this.getServiceInfo();
+    console.log(`🎯 [BackgroundRemoval] Starting with service: ${serviceInfo.service}, hasApiKey: ${serviceInfo.hasApiKey}, isProduction: ${serviceInfo.isProduction}`);
+    
     // TODO: Remove this after testing
     // return await this.mockBackgroundRemoval(imageBuffer);
     try {
       switch (this.config.service) {
         case 'remove.bg':
+          console.log(`🔧 [BackgroundRemoval] Using Remove.bg service`);
           return await this.removeBackgroundWithRemoveBg(imageBuffer);
         case 'clipdrop':
+          console.log(`🔧 [BackgroundRemoval] Using Clipdrop service`);
           return await this.removeBackgroundWithClipdrop(imageBuffer);
         default:
           // Fallback to mock for development
@@ -113,7 +157,7 @@ export class BackgroundRemovalService {
           throw new Error(`Unsupported background removal service: ${this.config.service}`);
       }
     } catch (error) {
-      console.error('Background removal failed:', error);
+      console.error('❌ [BackgroundRemoval] Service failed:', error);
       
       // In development, fallback to mock if API fails
       if (process.env.NODE_ENV === 'development') {
