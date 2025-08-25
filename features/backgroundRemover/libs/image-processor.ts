@@ -291,23 +291,23 @@ export class ImageProcessor {
       // const noBgBuffer = await removeBackgroundFn(originalBuffer);
       // console.log(`🎭 [ImageProcessor] Background removal completed for ${imageId} in ${Date.now() - bgRemovalStart}ms (${originalBuffer.length} -> ${noBgBuffer.length} bytes)`);
 
-      // Step 3: Flip horizontally
-      console.log(`🔄 [ImageProcessor] Step 3: Flipping horizontally for ${imageId}`);
-      const flipStart = Date.now();
-      const flippedBuffer = await this.flipHorizontally(originalBuffer);
-      console.log(`🔄 [ImageProcessor] Flip completed for ${imageId} in ${Date.now() - flipStart}ms`);
+      // // Step 3: Flip horizontally
+      // console.log(`🔄 [ImageProcessor] Step 3: Flipping horizontally for ${imageId}`);
+      // const flipStart = Date.now();
+      // const flippedBuffer = await this.flipHorizontally(originalBuffer);
+      // console.log(`🔄 [ImageProcessor] Flip completed for ${imageId} in ${Date.now() - flipStart}ms`);
 
       // Step 4: Convert to output format
-      console.log(`🔧 [ImageProcessor] Step 4: Converting to output format for ${imageId}`);
-      const convertStart = Date.now();
-      const finalBuffer = await this.convertToOutputFormat(flippedBuffer);
-      console.log(`🔧 [ImageProcessor] Format conversion completed for ${imageId} in ${Date.now() - convertStart}ms`);
+      // console.log(`🔧 [ImageProcessor] Step 4: Converting to output format for ${imageId}`);
+      // const convertStart = Date.now();
+      // const finalBuffer = await this.convertToOutputFormat(flippedBuffer);
+      // console.log(`🔧 [ImageProcessor] Format conversion completed for ${imageId} in ${Date.now() - convertStart}ms`);
 
       // Step 5: Upload processed image
       console.log(`☁️ [ImageProcessor] Step 5: Uploading processed image for ${imageId}`);
       const uploadStart = Date.now();
       const { url: processedUrl } = await this.uploadToStorage(
-        finalBuffer,
+        originalBuffer,
         `processed-${imageId}`,
         'processed-images'
       );
