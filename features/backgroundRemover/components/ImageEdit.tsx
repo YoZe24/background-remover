@@ -139,6 +139,10 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
     return imageData.processedUrl;
   };
 
+  const shouldShowTransparentBackground = () => {
+    return !showOriginal && imageData?.processedUrl && imageData.status === 'completed';
+  };
+
   if (isLoading || !imageData) {
     return (
       <div className="w-full max-w-5xl mx-auto">
@@ -193,7 +197,9 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left side - Image display */}
         <div className="flex-1 relative">
-          <div className="relative aspect-[4/3] max-h-[60vh] bg-base-200 rounded-xl overflow-hidden shadow-lg group">
+          <div className={`relative aspect-[4/3] max-h-[60vh] rounded-xl overflow-hidden shadow-lg group transition-all duration-500 ${
+            shouldShowTransparentBackground() ? 'transparent-bg' : 'bg-base-200'
+          }`}>
             {getCurrentImageUrl() ? (
               <>
                 <Image
@@ -230,26 +236,32 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
 
                 {/* Toggle Button Overlay - Top Left */}
                 {imageData.originalUrl && imageData.processedUrl && imageData.status === 'completed' && (
-                  <button
-                    onClick={() => setShowOriginal(!showOriginal)}
-                    className="absolute top-4 left-4 btn btn-sm btn-circle bg-base-100/95 backdrop-blur-sm border-base-300 hover:bg-base-100 hover:scale-110 transition-all duration-200 shadow-lg opacity-0 group-hover:opacity-100 z-10"
-                    title={showOriginal ? 'Show processed' : 'Show original'}
-                  >
-                    <svg 
-                      fill="none" 
-                      stroke="currentColor" 
-                      viewBox="0 0 24 24" 
-                      className="w-4 h-4 transition-transform duration-300"
-                      style={{ transform: showOriginal ? 'scaleX(-1)' : 'scaleX(1)' }}
+                  <div className="absolute top-4 left-4 opacity-0 group-hover:opacity-100 transition-all duration-200 z-10">
+                    <button
+                      onClick={() => setShowOriginal(!showOriginal)}
+                      className={`btn btn-sm rounded-full backdrop-blur-sm border hover:scale-110 transition-all duration-200 shadow-lg ${
+                        showOriginal 
+                          ? 'bg-primary/90 border-primary text-primary-content hover:bg-primary' 
+                          : 'bg-base-100/95 border-base-300 hover:bg-base-100'
+                      }`}
+                      title={showOriginal ? 'Show processed (with transparent background)' : 'Show original'}
                     >
-                      <path 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round" 
-                        strokeWidth="2" 
-                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" 
-                      />
-                    </svg>
-                  </button>
+                      <svg 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24" 
+                        className="w-4 h-4 transition-transform duration-300"
+                        style={{ transform: showOriginal ? 'scaleX(-1)' : 'scaleX(1)' }}
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth="2" 
+                          d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" 
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 )}
 
                 {/* Delete Button */}
