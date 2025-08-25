@@ -77,6 +77,7 @@ const ClientLayout = ({ children }: { children: ReactNode }) => {
 
       {/* Show Success/Error messages anywhere from the app with toast() */}
       <Toaster
+        position="top-right"
         toastOptions={{
           duration: 3000,
         }}
