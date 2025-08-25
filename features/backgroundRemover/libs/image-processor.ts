@@ -194,7 +194,7 @@ export class ImageProcessor {
     console.log(`📝 [ImageProcessor] Starting DB update for ${id} to status: ${status}`);
     
     try {
-      const supabase = createServiceClient(); // Use service client for database updates
+      const supabase = await createClient(); // Use service client for database updates
       console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
       
       // Add timeout to the database operation
@@ -206,6 +206,8 @@ export class ImageProcessor {
           ...updates,
         })
         .eq('id', id);
+
+      console.log('updatePromise', await updatePromise);
   
       // Race the update against a timeout
       const timeoutPromise = new Promise((_, reject) => {
@@ -216,7 +218,8 @@ export class ImageProcessor {
   
       console.log(`⏳ [ImageProcessor] Starting DB update query for ${id}...`);
       const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
-      
+      console.log('error', error);
+
       const updateTime = Date.now() - startTime;
       console.log(`✅ [ImageProcessor] DB update completed for ${id} in ${updateTime}ms`);
   
