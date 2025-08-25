@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
-import { createClient } from '@/libs/supabase/server';
+import { createClient, createServiceClient } from '@/libs/supabase/server';
 import type { ProcessedImage, ProcessingConfig, BackgroundRemovalConfig } from '@/features/backgroundRemover/types/image';
 
 // Default processing configuration
@@ -119,7 +119,7 @@ export class ImageProcessor {
     filename: string,
     bucket: 'original-images' | 'processed-images'
   ): Promise<{ url: string; path: string }> {
-    const supabase = await createClient();
+    const supabase = createServiceClient(); // Use service client for uploads
     const fileExt = this.config.outputFormat;
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${Date.now()}-${fileName}`;
@@ -150,7 +150,7 @@ export class ImageProcessor {
    * Delete file from storage
    */
   async deleteFromStorage(path: string, bucket: 'original-images' | 'processed-images'): Promise<void> {
-    const supabase = await createClient();
+    const supabase = createServiceClient(); // Use service client for deletion
     const { error } = await supabase.storage.from(bucket).remove([path]);
 
     if (error) {
@@ -171,8 +171,8 @@ export class ImageProcessor {
     console.log(`📝 [ImageProcessor] Starting DB update for ${id} to status: ${status}`);
     
     try {
-      const supabase = await createClient();
-      console.log(`🔌 [ImageProcessor] Supabase client created for ${id}`);
+      const supabase = createServiceClient(); // Use service client for database updates
+      console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
       
       // Add timeout to the database operation
       const updatePromise = supabase
@@ -207,7 +207,7 @@ export class ImageProcessor {
       throw error;
     }
   }
-  
+
   /**
    * Complete image processing pipeline
    */

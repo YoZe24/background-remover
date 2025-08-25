@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { createClient } from '@/libs/supabase/server';
+import { createClient, createServiceClient } from '@/libs/supabase/server';
 import { ImageProcessor } from '@/features/backgroundRemover/libs/image-processor';
 import { BackgroundRemovalService } from '@/features/backgroundRemover/libs/background-removal';
 import type { ProcessedImage } from '@/features/backgroundRemover/types/image';
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Create database record
-    const supabase = await createClient();
+    const supabase = createServiceClient(); // Use service client for database INSERT
     const imageRecord: Omit<ProcessedImage, 'id' | 'created_at' | 'updated_at'> = {
       original_filename: file.name,
       original_url: originalUrl,

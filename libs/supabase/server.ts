@@ -27,3 +27,21 @@ export async function createClient() {
     }
   );
 }
+
+// Service client for background processing - bypasses RLS
+export function createServiceClient() {
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Service role key bypasses RLS
+    {
+      cookies: {
+        getAll() {
+          return [];
+        },
+        setAll() {
+          // No-op for service client
+        },
+      },
+    }
+  );
+}

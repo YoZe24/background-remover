@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
+import { createClient, createServiceClient } from '@/libs/supabase/server';
 
 export async function GET(
   request: NextRequest,
@@ -68,7 +68,7 @@ export async function DELETE(
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceClient(); // Use service client for DELETE operations
     
     // Get image record first
     const { data, error: fetchError } = await supabase
