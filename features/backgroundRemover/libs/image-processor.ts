@@ -286,15 +286,15 @@ export class ImageProcessor {
       // console.log(`📏 [ImageProcessor] Resize completed for ${imageId} in ${Date.now() - resizeStart}ms (${originalBuffer.length} -> ${resizedBuffer.length} bytes)`);
 
       // Step 2: Remove background
-      console.log(`🎭 [ImageProcessor] Step 2: Removing background for ${imageId}`);
-      const bgRemovalStart = Date.now();
-      const noBgBuffer = await removeBackgroundFn(originalBuffer);
-      console.log(`🎭 [ImageProcessor] Background removal completed for ${imageId} in ${Date.now() - bgRemovalStart}ms (${originalBuffer.length} -> ${noBgBuffer.length} bytes)`);
+      // console.log(`🎭 [ImageProcessor] Step 2: Removing background for ${imageId}`);
+      // const bgRemovalStart = Date.now();
+      // const noBgBuffer = await removeBackgroundFn(originalBuffer);
+      // console.log(`🎭 [ImageProcessor] Background removal completed for ${imageId} in ${Date.now() - bgRemovalStart}ms (${originalBuffer.length} -> ${noBgBuffer.length} bytes)`);
 
       // Step 3: Flip horizontally
       console.log(`🔄 [ImageProcessor] Step 3: Flipping horizontally for ${imageId}`);
       const flipStart = Date.now();
-      const flippedBuffer = await this.flipHorizontally(noBgBuffer);
+      const flippedBuffer = await this.flipHorizontally(originalBuffer);
       console.log(`🔄 [ImageProcessor] Flip completed for ${imageId} in ${Date.now() - flipStart}ms`);
 
       // Step 4: Convert to output format
