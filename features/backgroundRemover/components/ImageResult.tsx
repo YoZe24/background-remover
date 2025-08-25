@@ -109,6 +109,19 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
     }
   };
 
+  const handleShare = async () => {
+    if (!imageData?.id) return;
+
+    const shareUrl = `${window.location.origin}/host/image/${imageData.id}`;
+    
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      toast.success('Share link copied to clipboard!');
+    } catch {
+      toast.error('Failed to copy link to clipboard');
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="card bg-base-100 shadow-xl">
@@ -200,12 +213,20 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
           
           <div className="flex gap-2">
             {imageData.processedUrl && (
-              <button 
-                className="btn btn-primary btn-sm"
-                onClick={handleDownload}
-              >
-                Download
-              </button>
+              <>
+                <button 
+                  className="btn btn-primary btn-sm"
+                  onClick={handleDownload}
+                >
+                  Download
+                </button>
+                <button 
+                  className="btn btn-secondary btn-sm"
+                  onClick={handleShare}
+                >
+                  Share
+                </button>
+              </>
             )}
             <button 
               className="btn btn-ghost btn-sm text-error"
