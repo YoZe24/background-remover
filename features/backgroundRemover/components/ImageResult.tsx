@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import type { ProcessedImageResponse } from '@/features/backgroundRemover/types/image';
+import { useBackgroundDeletion } from '@/features/backgroundRemover/hooks/useBackgroundDeletion';
 
 interface ImageResultProps {
   imageId: string;
@@ -14,8 +15,13 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
   const [imageData, setImageData] = useState<ProcessedImageResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+
+  // Initialize background deletion hook
+  const { deleteInBackground } = useBackgroundDeletion({
+    showSuccessToast: true,
+    showErrorToast: true,
+  });
 
   // Poll for status updates
   useEffect(() => {
@@ -61,32 +67,16 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
     };
   }, [imageId]);
 
-  const handleDelete = async () => {
-    if (isDeleting) return;
-
+  const handleDelete = useCallback(() => {
     const confirmDelete = window.confirm('Are you sure you want to delete this image?');
     if (!confirmDelete) return;
 
-    setIsDeleting(true);
-
-    try {
-      const response = await fetch(`/api/images/${imageId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to delete image');
-      }
-
-      toast.success('Image deleted successfully');
-      onDelete?.();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to delete image');
-    } finally {
-      setIsDeleting(false);
-    }
-  };
+    // Immediately navigate to the next component for better UX
+    onDelete?.();
+    
+    // Delete in background without blocking the UI
+    deleteInBackground(imageId);
+  }, [imageId, onDelete, deleteInBackground]);
 
   const handleDownload = async () => {
     if (!imageData?.processedUrl) return;
@@ -275,16 +265,11 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
             <button 
               className="absolute top-4 right-4 btn btn-md btn-circle bg-error/90 backdrop-blur-sm border-error-content/20 hover:bg-error hover:scale-110 transition-all duration-200 shadow-xl opacity-0 group-hover:opacity-100 text-error-content"
               onClick={handleDelete}
-              disabled={isDeleting}
               title="Delete image"
             >
-              {isDeleting ? (
-                <div className="loading loading-spinner loading-sm text-error-content"></div>
-              ) : (
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              )}
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
             </button>
           </>
         ) : (

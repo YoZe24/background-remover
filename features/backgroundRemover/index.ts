@@ -22,6 +22,7 @@ export type {
 
 // Hooks
 export { useImageUpload } from './hooks/useImageUpload';
+export { useBackgroundDeletion } from './hooks/useBackgroundDeletion';
 
 // Utilities
 export {
