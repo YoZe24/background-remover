@@ -102,9 +102,9 @@ export default function Page() {
         {/* Results Section */}
         {uploadedImages.length > 0 && (
           <section className="py-8 px-4">
-            <div className="max-w-4xl mx-auto space-y-6">
+            <div className="max-w-6xl mx-auto space-y-6">
               <h3 className="text-2xl font-bold text-center">Your Images</h3>
-              <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {uploadedImages.map((image) => (
                   <ImageResult
                     key={image.id}
