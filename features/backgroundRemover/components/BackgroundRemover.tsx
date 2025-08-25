@@ -36,11 +36,19 @@ export default function BackgroundRemover() {
   }, []);
 
   const handleSampleSelect = useCallback(async (file: File) => {
-    // Create a mock upload event for sample images
-    // This reuses the existing upload logic
+    // Generate optimistic image ID and transition immediately
+    const optimisticImageId = `temp_${uuidv4()}`;
+    
+    // Immediate transition for optimistic UX
+    setCurrentImageId(optimisticImageId);
+    setViewMode('edit');
+
+    // Upload in background - the ImageEdit component will handle the actual upload
+    // and update the imageId once the real upload completes
     const formData = new FormData();
     formData.append('file', file);
     formData.append('sessionId', sessionId);
+    formData.append('optimisticId', optimisticImageId); // Pass optimistic ID to backend
 
     try {
       const response = await fetch('/api/images/upload', {
@@ -54,12 +62,16 @@ export default function BackgroundRemover() {
       }
 
       const result = await response.json();
-      handleUploadSuccess(result);
+      // Update with real image ID after upload completes
+      setCurrentImageId(result.id);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload sample image';
       handleUploadError(errorMessage);
+      // Revert to upload view on error
+      setViewMode('upload');
+      setCurrentImageId(null);
     }
-  }, [sessionId, handleUploadSuccess, handleUploadError]);
+  }, [sessionId, handleUploadError]);
 
   return (
     <div className="w-full min-h-[70vh] flex items-center justify-center p-4">

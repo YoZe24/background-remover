@@ -1,4 +1,4 @@
-export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
+export type ProcessingStatus = 'pending' | 'uploading' | 'processing' | 'completed' | 'failed';
 
 export interface ProcessedImage {
   id: string;

@@ -29,6 +29,28 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
 
     const pollStatus = async () => {
       try {
+        // Check if this is an optimistic (temporary) image ID
+        const isOptimistic = imageId.startsWith('temp_');
+        
+        if (isOptimistic) {
+          // For optimistic IDs, show upload state until real ID comes
+          setImageData({
+            id: imageId,
+            status: 'uploading',
+            originalUrl: '',
+            processedUrl: null,
+            originalFilename: 'Sample Image',
+            fileSize: 0,
+            dimensions: { width: 0, height: 0 },
+            processingTimeMs: null,
+            error: null,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+          setIsLoading(false);
+          return; // Don't try to fetch from API for optimistic IDs
+        }
+
         const response = await fetch(`/api/images/${imageId}`);
         const data = await response.json();
 
@@ -60,7 +82,10 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
     pollStatus();
 
     // Set up polling every 1 second for pending/processing images (faster response)
-    pollInterval = setInterval(pollStatus, 1000);
+    // Don't poll for optimistic IDs, wait for real ID
+    if (!imageId.startsWith('temp_')) {
+      pollInterval = setInterval(pollStatus, 1000);
+    }
 
     return () => {
       clearInterval(pollInterval);
@@ -118,6 +143,7 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
       case 'completed': return 'bg-success';
       case 'failed': return 'bg-error';
       case 'processing': return 'bg-warning';
+      case 'uploading': return 'bg-info';
       default: return 'bg-info';
     }
   };
@@ -269,7 +295,9 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
               <div className="flex items-center justify-center h-full text-base-content/50">
                 <div className="text-center space-y-3">
                   <div className="loading loading-spinner loading-lg text-primary"></div>
-                  <p className="text-sm">Processing...</p>
+                  <p className="text-sm">
+                    {imageData?.status === 'uploading' ? 'Uploading...' : 'Processing...'}
+                  </p>
                 </div>
               </div>
             )}
