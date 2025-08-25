@@ -96,6 +96,8 @@ export class BackgroundRemovalService {
    * Remove background from image buffer
    */
   async removeBackground(imageBuffer: Buffer): Promise<Buffer> {
+    // TODO: Remove this after testing
+    return await this.mockBackgroundRemoval(imageBuffer);
     try {
       switch (this.config.service) {
         case 'remove.bg':

@@ -61,7 +61,7 @@ export interface ImageUploadProgress {
 
 // Background removal service configuration
 export interface BackgroundRemovalConfig {
-  service: 'remove.bg' | 'clipdrop' | 'photoroom';
+  service: 'remove.bg' | 'clipdrop';
   apiKey: string;
   quality?: 'auto' | 'hd' | '4k';
   format?: 'png' | 'jpg' | 'webp';
