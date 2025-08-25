@@ -52,38 +52,26 @@ export default function Page() {
 
   return (
     <>
-      {/* <Toaster 
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          style: {
-            background: 'oklch(var(--b1))',
-            color: 'oklch(var(--bc))',
-            border: '1px solid oklch(var(--b3))',
-          },
-        }}
-      /> */}
-
       <HeaderSimple />
 
       <main className="min-h-screen bg-base-50">
         {/* Hero Section */}
-        <section className="py-16 px-4">
+        <section className="py-8 px-4">
           <div className="max-w-4xl mx-auto text-center space-y-8">
             <div className="space-y-4">
               <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight">
                 Remove Backgrounds
                 <span className="text-primary"> Instantly</span>
               </h2>
-              <p className="text-xl md:text-2xl text-base-content/70 max-w-2xl mx-auto">
-                Upload any image and get a professionally processed result with background removed and horizontally flipped in seconds.
+              <p className="text-lg md:text-xl text-base-content/70 max-w-3xl mx-auto">
+                Upload any image for instant AI background removal and horizontal flip processing.
               </p>
             </div>
           </div>
         </section>
 
         {/* Upload Section */}
-        <section className="py-8 px-4">
+        <section className="px-4">
           <div className="max-w-4xl mx-auto space-y-8">
             <ImageUpload
               onUploadSuccess={handleUploadSuccess}
