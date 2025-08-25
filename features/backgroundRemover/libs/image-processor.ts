@@ -1,3 +1,4 @@
+'use server';
 import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient, createServiceClient } from '@/libs/supabase/server';
@@ -166,6 +167,7 @@ export class ImageProcessor {
     filename: string,
     bucket: 'original-images' | 'processed-images'
   ): Promise<{ url: string; path: string }> {
+    console.log(`🔧 [ImageProcessor] Uploading to storage for ${filename} in bucket ${bucket}`);
     const supabase = createServiceClient(); // Use service client for uploads
     const fileExt = this.config.outputFormat;
     const fileName = `${uuidv4()}.${fileExt}`;
@@ -177,6 +179,8 @@ export class ImageProcessor {
         contentType: `image/${fileExt}`,
         upsert: false,
       });
+
+    console.log(`🔧 [ImageProcessor] Upload completed for ${filename} in bucket ${bucket}`);
 
     if (error) {
       throw new Error(`Failed to upload to storage: ${error.message}`);
