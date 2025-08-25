@@ -64,9 +64,22 @@ export class ImageProcessor {
   async resizeIfNeeded(buffer: Buffer): Promise<Buffer> {
     console.log(`🔍 [ImageProcessor] Starting resize check - buffer size: ${buffer.length}`);
     
+    // TEMPORARY: Skip Sharp resize in production to test if it's causing hangs
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`🚨 [TEMP] Skipping Sharp resize in production (debugging)`);
+      return buffer;
+    }
+    
     try {
       console.log(`🔍 [ImageProcessor] Getting metadata...`);
-      const metadata = await sharp(buffer).metadata();
+      
+      // Add aggressive timeout for metadata
+      const metadataPromise = sharp(buffer).metadata();
+      const metadataTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Sharp metadata timeout')), 5000);
+      });
+      
+      const metadata = await Promise.race([metadataPromise, metadataTimeout]) as any;
       console.log(`🔍 [ImageProcessor] Metadata retrieved:`, { 
         width: metadata.width, 
         height: metadata.height, 
@@ -96,12 +109,19 @@ export class ImageProcessor {
       console.log(`🔄 [ImageProcessor] Calculated new dimensions: ${newWidth}x${newHeight}`);
       console.log(`🔄 [ImageProcessor] Starting Sharp resize operation...`);
       
-      const result = await sharp(buffer)
+      // Add aggressive timeout for resize
+      const resizePromise = sharp(buffer)
         .resize(newWidth, newHeight, {
           fit: 'inside',
           withoutEnlargement: true,
         })
         .toBuffer();
+        
+      const resizeTimeout = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Sharp resize timeout')), 10000);
+      });
+      
+      const result = await Promise.race([resizePromise, resizeTimeout]) as Buffer;
         
       console.log(`✅ [ImageProcessor] Resize completed - new buffer size: ${result.length}`);
       return result;
@@ -115,6 +135,12 @@ export class ImageProcessor {
    * Flip image horizontally
    */
   async flipHorizontally(buffer: Buffer): Promise<Buffer> {
+    // TEMPORARY: Skip Sharp flip in production to test if it's causing hangs
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`🚨 [TEMP] Skipping Sharp flip in production (debugging)`);
+      return buffer;
+    }
+    
     return await sharp(buffer).flop().toBuffer();
   }
 
@@ -122,6 +148,12 @@ export class ImageProcessor {
    * Convert image to specified output format
    */
   async convertToOutputFormat(buffer: Buffer): Promise<Buffer> {
+    // TEMPORARY: Skip Sharp format conversion in production to test if it's causing hangs
+    if (process.env.NODE_ENV === 'production') {
+      console.log(`🚨 [TEMP] Skipping Sharp format conversion in production (debugging)`);
+      return buffer;
+    }
+    
     const sharpInstance = sharp(buffer);
 
     switch (this.config.outputFormat) {
@@ -194,11 +226,11 @@ export class ImageProcessor {
     console.log(`📝 [ImageProcessor] Starting DB update for ${id} to status: ${status}`);
     
     try {
-      const supabase = await createClient(); // Use service client for database updates
+      const supabase = createServiceClient(); // Use service client for database updates
       console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
       
       // Add timeout to the database operation
-      const updatePromise = await supabase
+      const updatePromise = supabase
         .from('processed_images')
         .update({
           status,
@@ -206,8 +238,6 @@ export class ImageProcessor {
           ...updates,
         })
         .eq('id', id);
-
-      console.log('updatePromise', await updatePromise);
   
       // Race the update against a timeout
       const timeoutPromise = new Promise((_, reject) => {
@@ -218,7 +248,6 @@ export class ImageProcessor {
   
       console.log(`⏳ [ImageProcessor] Starting DB update query for ${id}...`);
       const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
-      console.log('error', error);
 
       const updateTime = Date.now() - startTime;
       console.log(`✅ [ImageProcessor] DB update completed for ${id} in ${updateTime}ms`);
