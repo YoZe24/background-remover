@@ -94,13 +94,15 @@ export default function SampleImages({ onSampleSelect, disabled = false }: Sampl
 
   return (
     <div className="w-full max-w-2xl mx-auto mt-8">
-      {/* Compact horizontal layout */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+      {/* Compact horizontal layout - aligned right */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-4">
         {/* Title section */}
         <div className="flex-shrink-0">
-          <h3 className="text-lg font-semibold text-base-content">
-            No image? Try one of these:
-          </h3>
+          <div className="text-base-content/60 leading-relaxed text-center sm:text-right">
+            <span className="text-sm font-normal">No image?</span>
+            <br />
+            <span className="text-sm font-normal">Try one of these:</span>
+          </div>
         </div>
 
         {/* Images in a horizontal row */}
@@ -162,9 +164,9 @@ export default function SampleImages({ onSampleSelect, disabled = false }: Sampl
       </div>
 
       {/* Info text */}
-      <div className="mt-3 text-center sm:text-left">
+      <div className="mt-3 text-center sm:text-right">
         <p className="text-xs text-base-content/50">
-          Sample images provided by remove.bg for demonstration purposes
+          Sample images provided for demonstration purposes
         </p>
       </div>
     </div>
