@@ -270,6 +270,22 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
                 </svg>
               </button>
             )}
+
+            {/* Delete Button Overlay */}
+            <button 
+              className="absolute top-4 right-4 btn btn-md btn-circle bg-error/90 backdrop-blur-sm border-error-content/20 hover:bg-error hover:scale-110 transition-all duration-200 shadow-xl opacity-0 group-hover:opacity-100 text-error-content"
+              onClick={handleDelete}
+              disabled={isDeleting}
+              title="Delete image"
+            >
+              {isDeleting ? (
+                <div className="loading loading-spinner loading-sm text-error-content"></div>
+              ) : (
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-5 h-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              )}
+            </button>
           </>
         ) : (
           <div className="flex items-center justify-center h-full text-base-content/50">
@@ -314,45 +330,31 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
               </span>
             )}
           </div>
-          
-          <div className="flex gap-1">
-            {imageData.processedUrl && (
-              <>
-                <button 
-                  className="btn btn-s btn-primary"
-                  onClick={handleDownload}
-                  title="Download processed image"
-                >
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-3 h-3">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                </button>
-                <button 
-                  className="btn btn-s btn-ghost"
-                  onClick={handleShare}
-                  title="Share image"
-                >
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-3 h-3">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-                  </svg>
-                </button>
-              </>
-            )}
-            <button 
-              className="btn btn-s btn-ghost text-error hover:btn-error hover:text-error-content"
-              onClick={handleDelete}
-              disabled={isDeleting}
-              title="Delete image"
-            >
-              {isDeleting ? (
-                <div className="loading loading-spinner loading-xs"></div>
-              ) : (
-                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-3 h-3">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+
+          {/* Action Buttons */}
+          {imageData.processedUrl && (
+            <div className="flex gap-1">
+              <button 
+                className="btn btn-primary btn-s rounded-full"
+                onClick={handleDownload}
+                title="Download processed image"
+              >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-              )}
-            </button>
-          </div>
+                Download
+              </button>
+              <button 
+                className="btn btn-ghost btn-s rounded-full"
+                onClick={handleShare}
+                title="Share image"
+              >
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" className="w-4 h-4">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Error message */}
@@ -362,12 +364,9 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
           </div>
         )}
 
-        {/* Image Info */}
-        <div className="space-y-1">
-          <div className="text-xs font-medium text-base-content/80 truncate" title={imageData.originalFilename}>
-            {imageData.originalFilename}
-          </div>
-          <div className="flex gap-2 text-xs text-base-content/60">
+        {/* Image Metadata - Bottom Center */}
+        <div className="text-center">
+          <div className="flex justify-center gap-2 text-xs text-base-content/60">
             {imageData.dimensions && (
               <span>{imageData.dimensions.width} × {imageData.dimensions.height}</span>
             )}
