@@ -225,42 +225,34 @@ export class ImageProcessor {
     const startTime = Date.now();
     console.log(`📝 [ImageProcessor] Starting DB update for ${id} to status: ${status}`);
     
-    try {
-      const supabase = createServiceClient(); // Use service client for database updates
-      console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
-      
-      // Add timeout to the database operation
-      const updatePromise = supabase
-        .from('processed_images')
-        .update({
-          status,
-          updated_at: new Date().toISOString(),
-          ...updates,
-        })
-        .eq('id', id);
-  
-      // Race the update against a timeout
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`Database update timed out after 10 seconds for ${id}`));
-        }, 10000); // 10 second timeout
-      });
-  
-      console.log(`⏳ [ImageProcessor] Starting DB update query for ${id}...`);
-      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
+    const supabase = createServiceClient(); // Use service client for database updates
+    console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
+    const controller = new AbortController();
 
-      const updateTime = Date.now() - startTime;
-      console.log(`✅ [ImageProcessor] DB update completed for ${id} in ${updateTime}ms`);
-  
-      if (error) {
-        console.error(`❌ [ImageProcessor] DB update error for ${id}:`, error);
-        throw new Error(`Failed to update processing status: ${error.message}`);
+    // Add timeout to the database operation
+    const updatePromise = supabase
+      .from('processed_images')
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+        ...updates,
+      })
+      .eq('id', id)
+      .abortSignal?.(controller.signal); // only works on latest supabase-js (>=2.39)
+
+      const timeout = setTimeout(() => {
+        controller.abort();
+      }, 15000);
+    
+
+      try {
+        await updatePromise;
+      } catch (err) {
+        throw new Error(`DB update failed for ${id}: ${(err as Error).message}`);
+      } finally {
+        clearTimeout(timeout);
       }
-    } catch (error) {
-      const updateTime = Date.now() - startTime;
-      console.error(`💥 [ImageProcessor] DB update failed for ${id} after ${updateTime}ms:`, error);
-      throw error;
-    }
+
   }
 
   /**
