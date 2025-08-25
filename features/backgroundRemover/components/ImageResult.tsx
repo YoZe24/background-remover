@@ -203,13 +203,52 @@ export default function ImageResult({ imageId, onDelete }: ImageResultProps) {
               src={getCurrentImageUrl()}
               alt={getCurrentImageAlt()}
               fill
-              className="object-cover transition-all duration-500 ease-in-out transform"
+              className={`object-cover transition-all duration-500 ease-in-out transform ${
+                imageData.status === 'processing' && !showOriginal ? 'blur-sm scale-105' : ''
+              }`}
               sizes="(max-width: 768px) 100vw, 50vw"
               key={showOriginal ? 'original' : 'processed'} // Force re-render for smooth transition
             />
+
+            {/* Processing Overlay */}
+            {imageData.status === 'processing' && !showOriginal && (
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-primary/10 to-transparent backdrop-blur-[1px]">
+                {/* Animated shimmer effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12" style={{ animation: 'processing-shimmer 2s ease-in-out infinite' }}></div>
+                
+                {/* Central processing indicator */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="bg-base-100/95 backdrop-blur-sm rounded-2xl p-6 shadow-2xl border border-primary/20">
+                    <div className="flex flex-col items-center gap-4">
+                      {/* Rotating AI processing icon */}
+                      <div className="relative">
+                        <div className="w-12 h-12 text-primary animate-spin" style={{ animationDuration: '3s' }}>
+                          <svg fill="currentColor" viewBox="0 0 24 24" className="w-full h-full">
+                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      {/* Processing text with typewriter effect */}
+                      <div className="text-center">
+                        <div className="text-sm font-semibold text-primary animate-pulse">
+                          Removing background...
+                        </div>
+                      </div>
+                      
+                    </div>
+                  </div>
+                </div>
+
+                {/* Corner processing indicators */}
+                <div className="absolute top-2 right-2 w-3 h-3 bg-warning rounded-full animate-pulse shadow-lg"></div>
+                <div className="absolute bottom-2 left-2 w-2 h-2 bg-info rounded-full animate-ping"></div>
+                <div className="absolute bottom-2 right-2 w-2 h-2 bg-success rounded-full animate-pulse" style={{ animationDelay: '500ms' }}></div>
+              </div>
+            )}
             
             {/* Toggle Button Overlay */}
-            {imageData.originalUrl && imageData.processedUrl && (
+            {imageData.originalUrl && imageData.processedUrl && imageData.status === 'completed' && (
               <button
                 onClick={() => setShowOriginal(!showOriginal)}
                 className="absolute top-4 left-4 btn btn-md btn-circle bg-base-100/95 backdrop-blur-sm border-base-300 hover:bg-base-100 hover:scale-110 transition-all duration-200 shadow-xl opacity-0 group-hover:opacity-100"
