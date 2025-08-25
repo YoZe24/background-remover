@@ -272,24 +272,24 @@ export class ImageProcessor {
       console.log(`💾 [ImageProcessor] Memory before resize: ${Math.round(memUsageBefore.heapUsed / 1024 / 1024)}MB heap, ${Math.round(memUsageBefore.rss / 1024 / 1024)}MB RSS`);
       
       // Add timeout to resize operation
-      const resizePromise = this.resizeIfNeeded(originalBuffer);
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error(`Resize operation timed out after 30 seconds for ${imageId}`));
-        }, 30000);
-      });
+      // const resizePromise = this.resizeIfNeeded(originalBuffer);
+      // const timeoutPromise = new Promise((_, reject) => {
+      //   setTimeout(() => {
+      //     reject(new Error(`Resize operation timed out after 30 seconds for ${imageId}`));
+      //   }, 30000);
+      // });
       
-      const resizedBuffer = await Promise.race([resizePromise, timeoutPromise]) as Buffer;
+      // const resizedBuffer = await Promise.race([resizePromise, timeoutPromise]) as Buffer;
       
-      const memUsageAfter = process.memoryUsage();
-      console.log(`💾 [ImageProcessor] Memory after resize: ${Math.round(memUsageAfter.heapUsed / 1024 / 1024)}MB heap, ${Math.round(memUsageAfter.rss / 1024 / 1024)}MB RSS`);
-      console.log(`📏 [ImageProcessor] Resize completed for ${imageId} in ${Date.now() - resizeStart}ms (${originalBuffer.length} -> ${resizedBuffer.length} bytes)`);
+      // const memUsageAfter = process.memoryUsage();
+      // console.log(`💾 [ImageProcessor] Memory after resize: ${Math.round(memUsageAfter.heapUsed / 1024 / 1024)}MB heap, ${Math.round(memUsageAfter.rss / 1024 / 1024)}MB RSS`);
+      // console.log(`📏 [ImageProcessor] Resize completed for ${imageId} in ${Date.now() - resizeStart}ms (${originalBuffer.length} -> ${resizedBuffer.length} bytes)`);
 
       // Step 2: Remove background
       console.log(`🎭 [ImageProcessor] Step 2: Removing background for ${imageId}`);
       const bgRemovalStart = Date.now();
-      const noBgBuffer = await removeBackgroundFn(resizedBuffer);
-      console.log(`🎭 [ImageProcessor] Background removal completed for ${imageId} in ${Date.now() - bgRemovalStart}ms (${resizedBuffer.length} -> ${noBgBuffer.length} bytes)`);
+      const noBgBuffer = await removeBackgroundFn(originalBuffer);
+      console.log(`🎭 [ImageProcessor] Background removal completed for ${imageId} in ${Date.now() - bgRemovalStart}ms (${originalBuffer.length} -> ${noBgBuffer.length} bytes)`);
 
       // Step 3: Flip horizontally
       console.log(`🔄 [ImageProcessor] Step 3: Flipping horizontally for ${imageId}`);
