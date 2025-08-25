@@ -63,13 +63,13 @@ function DownloadButton({ imageData }: { imageData: ProcessedImageResponse }) {
 function ImageDisplay({ imageData }: { imageData: ProcessedImageResponse }) {
   return (
     <div className="max-w-4xl mx-auto">
-      <div className="relative w-full max-h-[70vh] bg-gradient-to-br from-base-200 to-base-300 rounded-2xl overflow-hidden shadow-xl">
+      <div className="relative w-full bg-gradient-to-br from-base-200 to-base-300 rounded-2xl overflow-hidden shadow-xl transparent-bg">
         <Image
           src={imageData.processedUrl!}
           alt="Background removed image"
           width={imageData.dimensions?.width || 800}
           height={imageData.dimensions?.height || 800}
-          className="w-full h-auto object-contain"
+          className="w-full h-auto max-h-[50vh] object-contain"
           priority
         />
       </div>

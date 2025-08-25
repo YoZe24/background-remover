@@ -45,7 +45,9 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
             processingTimeMs: null,
             error: null,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            userSessionId: null,
+            expiresAt: null
           });
           setIsLoading(false);
           return; // Don't try to fetch from API for optimistic IDs
@@ -213,7 +215,7 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Left side - Image display */}
         <div className="flex-1 relative">
-          <div className={`relative aspect-[4/3] max-h-[60vh] rounded-xl overflow-hidden shadow-lg group transition-all duration-500 ${
+          <div className={`relative max-h-[60vh] rounded-xl overflow-hidden shadow-lg group transition-all duration-500 ${
             shouldShowTransparentBackground() ? 'transparent-bg' : 'bg-base-200'
           }`}>
             {getCurrentImageUrl() ? (
@@ -221,8 +223,9 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
                 <Image
                   src={getCurrentImageUrl()!}
                   alt={showOriginal ? 'Original image' : 'Processed image'}
-                  fill
-                  className={`object-cover transition-all duration-500 ease-in-out ${
+                  width={imageData?.dimensions?.width || 800}
+                  height={imageData?.dimensions?.height || 600}
+                  className={`w-full h-auto max-h-[60vh] object-contain transition-all duration-500 ease-in-out ${
                     imageData.status === 'processing' && !showOriginal ? 'blur-sm scale-105' : ''
                   }`}
                   sizes="(max-width: 1024px) 100vw, 60vw"
@@ -292,7 +295,10 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
                 </button>
               </>
             ) : (
-              <div className="flex items-center justify-center h-full text-base-content/50">
+              <div className="flex items-center justify-center text-base-content/50" style={{ 
+                minHeight: imageData?.status === 'uploading' ? '300px' : '400px',
+                aspectRatio: imageData?.status === 'uploading' ? '4/3' : 'auto'
+              }}>
                 <div className="text-center space-y-3">
                   <div className="loading loading-spinner loading-lg text-primary"></div>
                   <p className="text-sm">
