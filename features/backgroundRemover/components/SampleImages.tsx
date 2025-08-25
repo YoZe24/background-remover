@@ -107,7 +107,7 @@ export default function SampleImages({ onSampleSelect, disabled = false }: Sampl
         </div>
 
         {/* Images in a horizontal row */}
-        <div className="flex gap-3 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-hidden pb-2">
           {SAMPLE_IMAGES.map((sample) => (
             <button
               key={sample.id}
@@ -116,7 +116,7 @@ export default function SampleImages({ onSampleSelect, disabled = false }: Sampl
               className={`
                 relative group overflow-hidden rounded-lg border-2 transition-all duration-200 flex-shrink-0
                 w-16 h-16 sm:w-20 sm:h-20
-                ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary hover:scale-105 cursor-pointer'}
+                ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-primary cursor-pointer'}
                 ${loadingStates[sample.id] ? 'border-primary bg-primary/5' : 'border-base-300'}
               `}
             >
