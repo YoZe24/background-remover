@@ -80,7 +80,7 @@ export default function ImageUpload({
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto">
+    <div className="w-full max-w-md mx-auto">
       {/* Hidden file input */}
       <input
         ref={fileInputRef}
@@ -94,7 +94,7 @@ export default function ImageUpload({
       {/* Upload area - compact elegant square with rounded corners */}
       <div
         className={`
-          relative aspect-square border-3 border-dashed rounded-3xl p-8 text-center 
+          relative aspect-[4/3] border-3 border-dashed rounded-2xl p-6 text-center 
           transition-all duration-500 ease-out group overflow-hidden
           flex flex-col items-center justify-center
           ${isDragging 
@@ -125,20 +125,20 @@ export default function ImageUpload({
         </div>
 
         {isUploading ? (
-          <div className="flex flex-col items-center justify-center space-y-8 animate-in fade-in duration-500 w-full">
+          <div className="flex flex-col items-center justify-center space-y-6 animate-in fade-in duration-500 w-full">
             {/* Elegant loading spinner */}
-            <div className="relative w-24 h-24">
-              <div className="absolute inset-0 rounded-full border-4 border-primary/20"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-primary animate-spin"></div>
-              <div className="absolute inset-3 rounded-full bg-primary/10 flex items-center justify-center">
-                <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+            <div className="relative w-16 h-16">
+              <div className="absolute inset-0 rounded-full border-3 border-primary/20"></div>
+              <div className="absolute inset-0 rounded-full border-3 border-transparent border-t-primary animate-spin"></div>
+              <div className="absolute inset-2 rounded-full bg-primary/10 flex items-center justify-center">
+                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
               </div>
             </div>
             
-            <div className="space-y-6 text-center w-full max-w-xs">
-              <div className="space-y-3">
-                <p className="text-2xl font-bold text-primary tracking-tight">Processing</p>
-                <p className="text-base text-base-content/60 font-medium">Preparing your image...</p>
+            <div className="space-y-4 text-center w-full max-w-xs">
+              <div className="space-y-2">
+                <p className="text-xl font-bold text-primary tracking-tight">Processing</p>
+                <p className="text-sm text-base-content/60 font-medium">Preparing your image...</p>
               </div>
               
               {/* Enhanced progress bar */}
@@ -162,10 +162,10 @@ export default function ImageUpload({
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center space-y-8 group-hover:scale-105 transition-transform duration-500 w-full">
+          <div className="flex flex-col items-center justify-center space-y-6 group-hover:scale-105 transition-transform duration-500 w-full">
             {/* Elegant upload icon */}
-            <div className="relative w-28 h-28">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-primary/10 to-primary/20 rotate-3 
+            <div className="relative w-20 h-20">
+              <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-primary/20 rotate-3 
                             group-hover:rotate-6 transition-transform duration-500"></div>
               <div className="relative w-full h-full text-primary/70 group-hover:text-primary transition-colors duration-300">
                 <svg 
@@ -185,35 +185,35 @@ export default function ImageUpload({
             </div>
 
             {/* Upload text with enhanced typography */}
-            <div className="space-y-6 text-center w-full max-w-sm">
-              <div className="space-y-3">
-                <h3 className="text-3xl font-bold text-base-content tracking-tight">
+            <div className="space-y-4 text-center w-full max-w-sm">
+              <div className="space-y-2">
+                <h3 className="text-2xl font-bold text-base-content tracking-tight">
                   {isDragging ? (
                     <span className="text-primary animate-pulse">Drop it here</span>
                   ) : (
                     'Upload Image'
                   )}
                 </h3>
-                <p className="text-lg text-base-content/60 font-medium">
+                <p className="text-base text-base-content/60 font-medium">
                   Drag & drop or click to browse
                 </p>
               </div>
-              <p className="text-sm text-base-content/40 leading-relaxed">
+              <p className="text-xs text-base-content/40 leading-relaxed">
                 JPEG, PNG, WebP, GIF • Up to 50MB
               </p>
             </div>
 
             {/* Elegant call-to-action button */}
             <button 
-              className="btn btn-primary btn-lg rounded-2xl px-8 py-4 text-lg font-semibold
-                       shadow-xl shadow-primary/25 hover:shadow-2xl hover:shadow-primary/30
+              className="btn btn-primary rounded-xl px-6 py-3 text-base font-semibold
+                       shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30
                        transform hover:scale-105 transition-all duration-300
                        border-0 bg-gradient-to-r from-primary to-primary/90
                        hover:from-primary/90 hover:to-primary"
               disabled={disabled}
             >
-              <span className="flex items-center gap-3">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <span className="flex items-center gap-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
                 </svg>
                 Choose File

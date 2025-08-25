@@ -10,16 +10,21 @@ AI-powered background removal with horizontal flipping functionality.
 
 ### Quick Usage
 ```tsx
-import { ImageUpload, ImageResult } from '@/features/backgroundRemover';
+import { BackgroundRemover } from '@/features/backgroundRemover';
 
-// Use in your components
-<ImageUpload onUploadSuccess={handleSuccess} sessionId={sessionId} />
-<ImageResult imageId={imageId} onDelete={handleDelete} />
+// Simple unified component
+<BackgroundRemover />
+
+// Or use individual components for advanced control
+import { ImageUpload, ImageResult, ImageEdit } from '@/features/backgroundRemover';
 ```
 
 ### Components
-- **ImageUpload**: Drag & drop file upload with progress tracking
+- **BackgroundRemover**: Unified component with complete flow
+- **ImageUpload**: Drag & drop file upload with progress tracking  
+- **ImageEdit**: Split-screen image editing interface
 - **ImageResult**: Real-time processing status and result display
+- **SampleImages**: Pre-loaded sample images for testing
 
 ### API Endpoints
 - `POST /api/images/upload` - Upload and start processing

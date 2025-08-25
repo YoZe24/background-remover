@@ -76,12 +76,13 @@ export default function SampleImages({ onSampleSelect, disabled = false }: Sampl
     setLoadingStates(prev => ({ ...prev, [sample.id]: true }));
 
     try {
-      toast.loading('Loading sample image...', { id: sample.id });
+      // Faster loading with minimal toast time
+      const toastId = toast.loading('Loading...', { id: sample.id, duration: 1000 });
       
       const filename = `sample-${sample.category}-${sample.number}.jpg`;
       const file = await downloadImageAsFile(sample.url, filename);
       
-      toast.dismiss(sample.id);
+      toast.dismiss(toastId);
       onSampleSelect(file);
       
     } catch (error) {

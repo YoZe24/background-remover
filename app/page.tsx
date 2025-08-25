@@ -1,109 +1,33 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
-import { Toaster } from 'react-hot-toast';
 import HeaderSimple from '@/components/HeaderSimple';
-import ImageUpload from '@/features/backgroundRemover/components/ImageUpload';
-import ImageResult from '@/features/backgroundRemover/components/ImageResult';
-import SampleImages from '@/features/backgroundRemover/components/SampleImages';
-import { useImageUpload } from '@/features/backgroundRemover/hooks/useImageUpload';
-
-interface UploadedImage {
-  id: string;
-  status: string;
-  originalUrl: string;
-}
+import { BackgroundRemover } from '@/features/backgroundRemover';
 
 export default function Page() {
-  const [sessionId, setSessionId] = useState<string>('');
-  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([]);
-
-  // Initialize session ID on mount
-  useEffect(() => {
-    const storedSessionId = localStorage.getItem('background-remover-session');
-    if (storedSessionId) {
-      setSessionId(storedSessionId);
-    } else {
-      const newSessionId = uuidv4();
-      localStorage.setItem('background-remover-session', newSessionId);
-      setSessionId(newSessionId);
-    }
-  }, []);
-
-  const handleUploadSuccess = (result: UploadedImage) => {
-    setUploadedImages(prev => [result, ...prev]);
-  };
-
-  const handleUploadError = (error: string) => {
-    console.error('Upload error:', error);
-  };
-
-  const handleImageDelete = (imageId: string) => {
-    setUploadedImages(prev => prev.filter(img => img.id !== imageId));
-  };
-
-  // Use the shared upload hook
-  const { uploadFile, isUploading } = useImageUpload({
-    sessionId,
-    onUploadSuccess: handleUploadSuccess,
-    onUploadError: handleUploadError,
-  });
-
   return (
     <>
       <HeaderSimple />
 
       <main className="min-h-screen bg-base-50">
         {/* Hero Section */}
-        <section className="py-8 px-4">
-          <div className="max-w-4xl mx-auto text-center space-y-8">
-            <div className="space-y-4">
-              <h2 className="text-4xl md:text-6xl font-extrabold tracking-tight">
+        <section className="py-6 px-4">
+          <div className="max-w-4xl mx-auto text-center space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
                 Remove Backgrounds
                 <span className="text-primary"> Instantly</span>
               </h2>
-              <p className="text-lg md:text-xl text-base-content/70 max-w-3xl mx-auto">
+              <p className="text-base md:text-lg text-base-content/70 max-w-2xl mx-auto">
                 Upload any image for instant AI background removal and horizontal flip processing.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Upload Section */}
-        <section className="px-4">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <ImageUpload
-              onUploadSuccess={handleUploadSuccess}
-              onUploadError={handleUploadError}
-              sessionId={sessionId}
-              disabled={isUploading}
-            />
-            
-            <SampleImages
-              onSampleSelect={uploadFile}
-              disabled={isUploading}
-            />
-          </div>
+        {/* Background Remover Section */}
+        <section className="px-4 pb-8">
+          <BackgroundRemover />
         </section>
-
-        {/* Results Section */}
-        {uploadedImages.length > 0 && (
-          <section className="py-8 px-4">
-            <div className="max-w-6xl mx-auto space-y-6">
-              <h3 className="text-2xl font-bold text-center">Your Images</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {uploadedImages.map((image) => (
-                  <ImageResult
-                    key={image.id}
-                    imageId={image.id}
-                    onDelete={() => handleImageDelete(image.id)}
-                  />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
 
         <section className="py-16 px-4">
           <div className="max-w-4xl mx-auto text-center space-y-8">

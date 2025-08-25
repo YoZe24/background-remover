@@ -21,7 +21,7 @@ export default function NotFound() {
         
         <h1 className="text-3xl font-bold mb-3 text-base-content/80">Image Not Found</h1>
         <p className="text-base-content/60 mb-8 max-w-sm mx-auto">
-          This image doesn't exist or has been removed.
+          This image doesn&apos;t exist or has been removed.
         </p>
         
         <Link href="/" className="btn btn-primary shadow-lg hover:shadow-xl transition-all duration-200">

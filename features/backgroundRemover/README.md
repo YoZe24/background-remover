@@ -4,12 +4,20 @@ AI-powered background removal with horizontal flipping, built as a modular featu
 
 ## 🚀 Quick Start
 
-### Import Components
+### Simple Usage (Recommended)
 ```typescript
-import { ImageUpload, ImageResult } from '@/features/backgroundRemover';
+import { BackgroundRemover } from '@/features/backgroundRemover';
+
+export default function Page() {
+  return (
+    <div>
+      <BackgroundRemover />
+    </div>
+  );
+}
 ```
 
-### Basic Usage
+### Advanced Usage (Individual Components)
 ```tsx
 import { useState } from 'react';
 import { ImageUpload, ImageResult } from '@/features/backgroundRemover';
@@ -49,8 +57,11 @@ export default function BackgroundRemoverPage() {
 ```
 backgroundRemover/
 ├── components/           # React Components
-│   ├── ImageUpload.tsx  # File upload with drag & drop
-│   └── ImageResult.tsx  # Processing status & results
+│   ├── BackgroundRemover.tsx  # Main unified component
+│   ├── ImageUpload.tsx        # File upload with drag & drop
+│   ├── ImageEdit.tsx          # Image editing interface
+│   ├── ImageResult.tsx        # Processing status & results
+│   └── SampleImages.tsx       # Sample image selector
 ├── api/                 # Next.js API Routes
 │   └── images/          # Image processing endpoints
 ├── libs/                # Business Logic
@@ -61,9 +72,23 @@ backgroundRemover/
 ├── docs/               # Documentation
 │   ├── INFRASTRUCTURE.md      # Technical architecture
 │   └── database-schema.sql    # Database setup
-├── index.ts            # Main exports
+├── index.ts            # Client-side exports
+├── server.ts           # Server-side exports
 └── README.md           # This file
 ```
+
+### Server-Side Components
+
+For server-side image processing (API routes, server components):
+
+```typescript
+import { ImageProcessor, BackgroundRemovalService } from '@/features/backgroundRemover/server';
+```
+
+⚠️ **Important**: Server-side components should only be imported in:
+- API routes (`app/api/`)
+- Server Components
+- Server-side utilities
 
 ## 🔧 Setup Requirements
 
