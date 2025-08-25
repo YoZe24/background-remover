@@ -2,6 +2,7 @@ import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient, createServiceClient } from '@/libs/supabase/server';
 import type { ProcessedImage, ProcessingConfig, BackgroundRemovalConfig } from '@/features/backgroundRemover/types/image';
+import { createActualClient } from '@/libs/supabase/test';
 
 // Default processing configuration
 const DEFAULT_CONFIG: ProcessingConfig = {
@@ -64,11 +65,8 @@ export class ImageProcessor {
   async resizeIfNeeded(buffer: Buffer): Promise<Buffer> {
     console.log(`🔍 [ImageProcessor] Starting resize check - buffer size: ${buffer.length}`);
     
-    // TEMPORARY: Skip Sharp resize in production to test if it's causing hangs
-    if (process.env.NODE_ENV === 'production') {
-      console.log(`🚨 [TEMP] Skipping Sharp resize in production (debugging)`);
-      return buffer;
-    }
+    // Enable Sharp in production with proper configuration
+    console.log(`🔧 [ImageProcessor] Sharp resize enabled with Vercel optimization`);
     
     try {
       console.log(`🔍 [ImageProcessor] Getting metadata...`);
@@ -135,11 +133,8 @@ export class ImageProcessor {
    * Flip image horizontally
    */
   async flipHorizontally(buffer: Buffer): Promise<Buffer> {
-    // TEMPORARY: Skip Sharp flip in production to test if it's causing hangs
-    if (process.env.NODE_ENV === 'production') {
-      console.log(`🚨 [TEMP] Skipping Sharp flip in production (debugging)`);
-      return buffer;
-    }
+    // Sharp flip enabled with Vercel optimization
+    console.log(`🔧 [ImageProcessor] Sharp flip enabled with Vercel optimization`);
     
     return await sharp(buffer).flop().toBuffer();
   }
@@ -148,11 +143,8 @@ export class ImageProcessor {
    * Convert image to specified output format
    */
   async convertToOutputFormat(buffer: Buffer): Promise<Buffer> {
-    // TEMPORARY: Skip Sharp format conversion in production to test if it's causing hangs
-    if (process.env.NODE_ENV === 'production') {
-      console.log(`🚨 [TEMP] Skipping Sharp format conversion in production (debugging)`);
-      return buffer;
-    }
+    // Sharp format conversion enabled with Vercel optimization
+    console.log(`🔧 [ImageProcessor] Sharp format conversion enabled with Vercel optimization`);
     
     const sharpInstance = sharp(buffer);
 
@@ -225,7 +217,7 @@ export class ImageProcessor {
     const startTime = Date.now();
     console.log(`📝 [ImageProcessor] Starting DB update for ${id} to status: ${status}`);
     
-    const supabase = createServiceClient(); // Use service client for database updates
+    const supabase = createActualClient(); // Use service client for database updates
     console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
     const controller = new AbortController();
 
