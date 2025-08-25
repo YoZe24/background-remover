@@ -26,30 +26,35 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
   // Poll for status updates
   useEffect(() => {
     let pollInterval: ReturnType<typeof setInterval>;
+    let isMounted = true;
 
     const pollStatus = async () => {
+      if (!isMounted) return;
+
       try {
         // Check if this is an optimistic (temporary) image ID
         const isOptimistic = imageId.startsWith('temp_');
         
         if (isOptimistic) {
           // For optimistic IDs, show upload state until real ID comes
-          setImageData({
-            id: imageId,
-            status: 'uploading',
-            originalUrl: '',
-            processedUrl: null,
-            originalFilename: 'Sample Image',
-            fileSize: 0,
-            dimensions: { width: 0, height: 0 },
-            processingTimeMs: null,
-            error: null,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            userSessionId: null,
-            expiresAt: null
-          });
-          setIsLoading(false);
+          if (isMounted) {
+            setImageData({
+              id: imageId,
+              status: 'uploading',
+              originalUrl: '',
+              processedUrl: null,
+              originalFilename: 'Sample Image',
+              fileSize: 0,
+              dimensions: { width: 0, height: 0 },
+              processingTimeMs: null,
+              error: null,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              userSessionId: null,
+              expiresAt: null
+            });
+            setIsLoading(false);
+          }
           return; // Don't try to fetch from API for optimistic IDs
         }
 
@@ -59,6 +64,8 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch image status');
         }
+
+        if (!isMounted) return;
 
         setImageData(data);
         setIsLoading(false);
@@ -74,6 +81,7 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
           }
         }
       } catch (err) {
+        if (!isMounted) return;
         setError(err instanceof Error ? err.message : 'Failed to fetch image status');
         setIsLoading(false);
         clearInterval(pollInterval);
@@ -83,13 +91,14 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
     // Initial fetch
     pollStatus();
 
-    // Set up polling every 1 second for pending/processing images (faster response)
+    // Set up polling every 2 seconds for pending/processing images (reduced frequency)
     // Don't poll for optimistic IDs, wait for real ID
     if (!imageId.startsWith('temp_')) {
-      pollInterval = setInterval(pollStatus, 1000);
+      pollInterval = setInterval(pollStatus, 2000); // Increased from 1000ms to 2000ms
     }
 
     return () => {
+      isMounted = false;
       clearInterval(pollInterval);
     };
   }, [imageId]);
