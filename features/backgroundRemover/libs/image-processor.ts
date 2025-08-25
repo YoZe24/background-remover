@@ -167,22 +167,47 @@ export class ImageProcessor {
     status: ProcessedImage['status'],
     updates: Partial<ProcessedImage> = {}
   ): Promise<void> {
-    const supabase = await createClient();
+    const startTime = Date.now();
+    console.log(`📝 [ImageProcessor] Starting DB update for ${id} to status: ${status}`);
     
-    const { error } = await supabase
-      .from('processed_images')
-      .update({
-        status,
-        updated_at: new Date().toISOString(),
-        ...updates,
-      })
-      .eq('id', id);
-
-    if (error) {
-      throw new Error(`Failed to update processing status: ${error.message}`);
+    try {
+      const supabase = await createClient();
+      console.log(`🔌 [ImageProcessor] Supabase client created for ${id}`);
+      
+      // Add timeout to the database operation
+      const updatePromise = supabase
+        .from('processed_images')
+        .update({
+          status,
+          updated_at: new Date().toISOString(),
+          ...updates,
+        })
+        .eq('id', id);
+  
+      // Race the update against a timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error(`Database update timed out after 10 seconds for ${id}`));
+        }, 10000); // 10 second timeout
+      });
+  
+      console.log(`⏳ [ImageProcessor] Starting DB update query for ${id}...`);
+      const { error } = await Promise.race([updatePromise, timeoutPromise]) as any;
+      
+      const updateTime = Date.now() - startTime;
+      console.log(`✅ [ImageProcessor] DB update completed for ${id} in ${updateTime}ms`);
+  
+      if (error) {
+        console.error(`❌ [ImageProcessor] DB update error for ${id}:`, error);
+        throw new Error(`Failed to update processing status: ${error.message}`);
+      }
+    } catch (error) {
+      const updateTime = Date.now() - startTime;
+      console.error(`💥 [ImageProcessor] DB update failed for ${id} after ${updateTime}ms:`, error);
+      throw error;
     }
   }
-
+  
   /**
    * Complete image processing pipeline
    */
