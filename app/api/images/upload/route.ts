@@ -156,10 +156,6 @@ async function processImageInBackground(
   console.log(`🎨 [Background] Starting background processing for image ${imageId} (buffer size: ${originalBuffer.length} bytes)`);
   console.log(`🔍 [Background] Execution context check for ${imageId} - function starting`);
   
-  // Add a small delay to ensure we're truly in background context
-  await new Promise(resolve => setTimeout(resolve, 100));
-  console.log(`🔍 [Background] Execution context check for ${imageId} - delay completed`);
-  
   try {
     // Log service configuration
     const serviceInfo = backgroundRemoval.getServiceInfo();
