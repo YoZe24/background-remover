@@ -300,11 +300,8 @@ export class ImageProcessor {
     console.log(`🔄 [ImageProcessor] Starting processing pipeline for ${imageId}`);
 
     try {
-      // Update status to processing
-      console.log(`📝 [ImageProcessor] Updating status to 'processing' for ${imageId}`);
-      await this.updateProcessingStatus(imageId, 'processing');
-
       console.log(`🔧 [ImageProcessor] SIMPLIFIED PIPELINE - Only uploading for debugging`);
+      console.log(`📝 [ImageProcessor] Status should already be 'processing' for ${imageId}`);
       
       // Step 1: Upload processed image (simplified for debugging)
       console.log(`☁️ [ImageProcessor] Step 1: Uploading processed image for ${imageId}`);

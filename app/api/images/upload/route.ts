@@ -93,17 +93,44 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Start background processing (fire and forget)
-    processImageInBackground(data.id, buffer, imageProcessor, backgroundRemoval);
+    // Start processing and wait for the initial status update to ensure execution context persists
+    console.log(`🚀 [Upload] Starting processing for ${data.id} (waiting for initial status update)`);
+    
+    try {
+      // Update status to processing first to ensure the function stays alive
+      await imageProcessor.updateProcessingStatus(data.id, 'processing');
+      console.log(`✅ [Upload] Initial status update completed for ${data.id}`);
+      
+      // Now start the actual processing in background (but keep the context alive longer)
+      processImageInBackground(data.id, buffer, imageProcessor, backgroundRemoval)
+        .catch(error => {
+          console.error(`❌ [Upload] Background processing failed for ${data.id}:`, error);
+        });
 
-    // Return immediate response with tracking ID
-    return NextResponse.json({
-      id: data.id,
-      status: 'pending',
-      message: 'Image uploaded successfully. Processing started.',
-      originalUrl,
-      sessionId,
-    });
+      // Return response after ensuring processing context is established
+      return NextResponse.json({
+        id: data.id,
+        status: 'processing', // Changed from 'pending' since we already updated it
+        message: 'Image uploaded successfully. Processing started.',
+        originalUrl,
+        sessionId,
+      });
+    } catch (error) {
+      console.error(`❌ [Upload] Failed to start processing for ${data.id}:`, error);
+      
+      // Fallback: still return success but mark as failed
+      await imageProcessor.updateProcessingStatus(data.id, 'failed', {
+        error_message: 'Failed to start processing'
+      });
+      
+      return NextResponse.json({
+        id: data.id,
+        status: 'failed',
+        message: 'Image uploaded but processing failed to start.',
+        originalUrl,
+        sessionId,
+      });
+    }
 
   } catch (error) {
     console.error('Upload error:', error);
@@ -126,7 +153,12 @@ async function processImageInBackground(
   backgroundRemoval: BackgroundRemovalService
 ) {
   const startTime = Date.now();
-  console.log(`🎨 [Upload] Starting background processing for image ${imageId} (buffer size: ${originalBuffer.length} bytes)`);
+  console.log(`🎨 [Background] Starting background processing for image ${imageId} (buffer size: ${originalBuffer.length} bytes)`);
+  console.log(`🔍 [Background] Execution context check for ${imageId} - function starting`);
+  
+  // Add a small delay to ensure we're truly in background context
+  await new Promise(resolve => setTimeout(resolve, 100));
+  console.log(`🔍 [Background] Execution context check for ${imageId} - delay completed`);
   
   try {
     // Log service configuration
@@ -143,10 +175,12 @@ async function processImageInBackground(
     );
 
     const totalTime = Date.now() - startTime;
-    console.log(`✅ [Upload] Successfully processed image ${imageId} in ${totalTime}ms`);
+    console.log(`✅ [Background] Successfully processed image ${imageId} in ${totalTime}ms`);
+    console.log(`🔍 [Background] Execution context check for ${imageId} - completed successfully`);
   } catch (error) {
     const totalTime = Date.now() - startTime;
-    console.error(`❌ [Upload] Failed to process image ${imageId} after ${totalTime}ms:`, error);
+    console.error(`❌ [Background] Failed to process image ${imageId} after ${totalTime}ms:`, error);
+    console.log(`🔍 [Background] Execution context check for ${imageId} - failed with error`);
     
     // Additional error context
     if (error instanceof Error) {
