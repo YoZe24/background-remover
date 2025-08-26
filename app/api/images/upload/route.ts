@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createServiceClient } from '@/libs/supabase/server';
+import { ImageProcessor } from '@/features/backgroundRemover/libs/image-processor';
+import { BackgroundRemovalService } from '@/features/backgroundRemover/libs/background-removal';
 import type { ProcessedImage } from '@/features/backgroundRemover/types/image';
 
 // Configure maximum file size for uploads (50MB)
@@ -21,34 +23,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Inline file validation (no classes)
-    const maxFileSize = 50 * 1024 * 1024; // 50MB
-    const allowedFormats = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
-    
-    if (file.size > maxFileSize) {
+    // Initialize services
+    const imageProcessor = new ImageProcessor();
+    const backgroundRemoval = new BackgroundRemovalService();
+
+    // Validate file
+    const validation = imageProcessor.validateFile(file);
+    if (!validation.valid) {
       return NextResponse.json(
-        { error: `File size exceeds maximum allowed size of ${maxFileSize / (1024 * 1024)}MB` },
+        { error: validation.error },
         { status: 400 }
       );
     }
-    
-    if (!allowedFormats.includes(file.type)) {
+
+    // Validate background removal service
+    const serviceValidation = backgroundRemoval.validateConfig();
+    if (!serviceValidation.valid) {
       return NextResponse.json(
-        { error: `File type ${file.type} is not supported. Allowed types: ${allowedFormats.join(', ')}` },
-        { status: 400 }
+        { error: `Service configuration error: ${serviceValidation.errors.join(', ')}` },
+        { status: 500 }
       );
     }
 
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
 
-    // Get basic metadata (inline - no Sharp dependency for now)
-    const metadata = {
-      width: 0, // Will be filled later if needed
-      height: 0, // Will be filled later if needed
-      format: file.type.split('/')[1] || 'unknown',
-      size: buffer.length,
-    };
+    // Get image metadata using ImageProcessor
+    const metadata = await imageProcessor.getImageMetadata(buffer);
 
     // Upload original image to storage (inline)
     const supabase = createServiceClient();
@@ -115,115 +116,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Start processing INLINE - everything in the route handler
-    console.log(`🚀 [Upload] Starting INLINE processing for ${data.id} (no class methods)`);
+    // Start background processing
+    console.log(`🚀 [Upload] Starting background processing for ${data.id}`);
     
-    try {
-      // Step 1: Update status to processing (inline Supabase call)
-      console.log(`📝 [Upload] Updating status to 'processing' for ${data.id}`);
-      const updateResult = await supabase
-        .from('processed_images')
-        .update({
-          status: 'processing',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', data.id)
-        .select('id, status');
-      
-      if (updateResult.error) {
-        throw new Error(`Failed to update status: ${updateResult.error.message}`);
-      }
-      
-      console.log(`✅ [Upload] Status updated to processing for ${data.id}`);
-      
-      // Step 2: Upload processed image (inline storage call - simplified)
-      console.log(`☁️ [Upload] Uploading processed image for ${data.id} (using original buffer for testing)`);
-      
-      const fileExt = 'png';
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `${Date.now()}-${fileName}`;
-      
-      console.log(`📁 [Upload] Generated file path: ${filePath}`);
-      
-      // Direct Supabase storage call (no class methods)
-      const uploadResult = await supabase.storage
-        .from('processed-images')
-        .upload(filePath, buffer, {
-          contentType: `image/${fileExt}`,
-          upsert: false,
-        });
-      
-      if (uploadResult.error) {
-        throw new Error(`Upload failed: ${uploadResult.error.message}`);
-      }
-      
-      console.log(`✅ [Upload] Upload completed for ${data.id}`);
-      
-      // Get public URL (inline)
-      const { data: { publicUrl } } = supabase.storage
-        .from('processed-images')
-        .getPublicUrl(uploadResult.data.path);
-      
-      console.log(`🔗 [Upload] Public URL generated: ${publicUrl}`);
-      
-      // Step 3: Update to completed (inline)
-      console.log(`📝 [Upload] Updating status to 'completed' for ${data.id}`);
-      
-      const completedResult = await supabase
-        .from('processed_images')
-        .update({
-          status: 'completed',
-          processed_url: publicUrl,
-          processing_time_ms: Date.now() - Date.now(), // Will be very fast
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', data.id)
-        .select('id, status');
-      
-      if (completedResult.error) {
-        console.error(`❌ [Upload] Failed to update to completed: ${completedResult.error.message}`);
-        // Continue anyway, file is uploaded
-      } else {
-        console.log(`✅ [Upload] Status updated to completed for ${data.id}`);
-      }
-      
-      console.log(`🎉 [Upload] INLINE processing completed successfully for ${data.id}`);
+    // Start processing in background (but keep execution context alive)
+    processImageInBackground(data.id, buffer, imageProcessor, backgroundRemoval, supabase)
+      .catch(error => {
+        console.error(`❌ [Upload] Background processing failed for ${data.id}:`, error);
+      });
 
-      return NextResponse.json({
-        id: data.id,
-        status: 'completed',
-        message: 'Image uploaded and processed successfully.',
-        originalUrl,
-        processedUrl: publicUrl,
-        sessionId,
-      });
-      
-    } catch (error) {
-      console.error(`❌ [Upload] INLINE processing failed for ${data.id}:`, error);
-      
-      // Update to failed status (inline)
-      try {
-        await supabase
-          .from('processed_images')
-          .update({
-            status: 'failed',
-            error_message: error instanceof Error ? error.message : 'Processing failed',
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', data.id);
-      } catch (updateError) {
-        console.error(`❌ [Upload] Failed to update failed status: ${updateError}`);
-      }
-      
-      return NextResponse.json({
-        id: data.id,
-        status: 'failed',
-        message: 'Image uploaded but processing failed.',
-        originalUrl,
-        sessionId,
-        error: error instanceof Error ? error.message : 'Processing failed',
-      });
-    }
+    // Return immediate response
+    return NextResponse.json({
+      id: data.id,
+      status: 'pending',
+      message: 'Image uploaded successfully. Processing started.',
+      originalUrl,
+      sessionId,
+    });
 
   } catch (error) {
     console.error('Upload error:', error);
@@ -236,4 +145,104 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Background processing removed - everything is now inline in the main route handler
+/**
+ * Process image in background with ALL Supabase calls in route handler
+ */
+async function processImageInBackground(
+  imageId: string,
+  originalBuffer: Buffer,
+  imageProcessor: ImageProcessor,
+  backgroundRemoval: BackgroundRemovalService,
+  supabase: any
+) {
+  const startTime = Date.now();
+  console.log(`🎨 [Background] Starting background processing for image ${imageId} (buffer size: ${originalBuffer.length} bytes)`);
+  
+  try {
+    // Step 1: Update status to processing (Supabase call in route)
+    console.log(`📝 [Background] Updating status to 'processing' for ${imageId}`);
+    const { error: statusError } = await supabase
+      .from('processed_images')
+      .update({
+        status: 'processing',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', imageId);
+    
+    if (statusError) {
+      throw new Error(`Failed to update status: ${statusError.message}`);
+    }
+    
+    console.log(`✅ [Background] Status updated to processing for ${imageId}`);
+    
+    // Step 2: Process image (ImageProcessor returns data, no external calls)
+    console.log(`🔄 [Background] Starting image processing for ${imageId}`);
+    const processingResult = await imageProcessor.processImage(
+      originalBuffer,
+      imageId,
+      (buffer) => backgroundRemoval.removeBackground(buffer)
+    );
+    
+    console.log(`✅ [Background] Image processing completed for ${imageId}`);
+    
+    // Step 3: Upload processed image (Supabase call in route)
+    console.log(`☁️ [Background] Uploading processed image for ${imageId}`);
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('processed-images')
+      .upload(processingResult.uploadData.filePath, processingResult.processedBuffer, {
+        contentType: processingResult.uploadData.contentType,
+        upsert: false,
+      });
+    
+    if (uploadError) {
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+    
+    // Get public URL (Supabase call in route)
+    const { data: { publicUrl } } = supabase.storage
+      .from('processed-images')
+      .getPublicUrl(uploadData.path);
+    
+    console.log(`✅ [Background] Upload completed for ${imageId}: ${publicUrl}`);
+    
+    // Step 4: Update to completed (Supabase call in route)
+    console.log(`📝 [Background] Updating status to 'completed' for ${imageId}`);
+    const { error: completedError } = await supabase
+      .from('processed_images')
+      .update({
+        status: 'completed',
+        processed_url: publicUrl,
+        processing_time_ms: processingResult.processingTimeMs,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', imageId);
+    
+    if (completedError) {
+      console.error(`❌ [Background] Failed to update to completed: ${completedError.message}`);
+      // Continue anyway, processing succeeded
+    }
+    
+    const totalTime = Date.now() - startTime;
+    console.log(`🎉 [Background] Successfully processed image ${imageId} in ${totalTime}ms`);
+    
+  } catch (error) {
+    const totalTime = Date.now() - startTime;
+    console.error(`❌ [Background] Failed to process image ${imageId} after ${totalTime}ms:`, error);
+    
+    // Update to failed status (Supabase call in route)
+    try {
+      await supabase
+        .from('processed_images')
+        .update({
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Processing failed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', imageId);
+    } catch (updateError) {
+      console.error(`❌ [Background] Failed to update failed status: ${updateError}`);
+    }
+    
+    throw error;
+  }
+}

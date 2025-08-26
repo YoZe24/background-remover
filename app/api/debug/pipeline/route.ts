@@ -39,21 +39,37 @@ export async function POST(request: NextRequest) {
     const metadata = await imageProcessor.getImageMetadata(buffer);
     console.log(`✅ [Pipeline Debug] Metadata extracted:`, metadata);
     
-    // Test 4: Storage upload
+    // Test 4: Storage upload (inline since ImageProcessor no longer does uploads)
     console.log('🔍 [Pipeline Debug] Test 4: Storage upload');
-    const uploadResult = await imageProcessor.uploadToStorage(
-      buffer,
-      'debug-test',
-      'processed-images'
-    );
-    console.log(`✅ [Pipeline Debug] Upload successful:`, uploadResult);
+    const supabase = createServiceClient();
+    const uploadData = imageProcessor.prepareUploadData('debug-test', 'processed-images');
+    
+    const { data: uploadResult, error: uploadError } = await supabase.storage
+      .from('processed-images')
+      .upload(uploadData.filePath, buffer, {
+        contentType: uploadData.contentType,
+        upsert: false,
+      });
+    
+    if (uploadError) {
+      return NextResponse.json({
+        error: 'Storage upload failed',
+        details: uploadError.message
+      }, { status: 500 });
+    }
+    
+    const { data: { publicUrl } } = supabase.storage
+      .from('processed-images')
+      .getPublicUrl(uploadResult.path);
+    
+    const finalUploadResult = { url: publicUrl, path: uploadResult.path };
+    console.log(`✅ [Pipeline Debug] Upload successful:`, finalUploadResult);
     
     // Test 5: Database operations
     console.log('🔍 [Pipeline Debug] Test 5: Database operations');
-    const supabase = createServiceClient();
     const testRecord = {
       original_filename: file.name,
-      original_url: uploadResult.url,
+      original_url: finalUploadResult.url,
       processed_url: '',
       status: 'pending' as const,
       error_message: '',
@@ -82,11 +98,11 @@ export async function POST(request: NextRequest) {
     
     // Test 6: Database update
     console.log('🔍 [Pipeline Debug] Test 6: Database update');
-    const { error: updateError } = await supabase
-      .from('processed_images')
-      .update({
-        status: 'completed',
-        processed_url: uploadResult.url,
+          const { error: updateError } = await supabase
+        .from('processed_images')
+        .update({
+          status: 'completed',
+          processed_url: finalUploadResult.url,
         processing_time_ms: Date.now() - startTime,
         updated_at: new Date().toISOString(),
       })
@@ -104,7 +120,7 @@ export async function POST(request: NextRequest) {
     
     // Test 7: Cleanup
     console.log('🔍 [Pipeline Debug] Test 7: Cleanup');
-    await imageProcessor.deleteFromStorage(uploadResult.path, 'processed-images');
+    await supabase.storage.from('processed-images').remove([finalUploadResult.path]);
     await supabase
       .from('processed_images')
       .delete()
@@ -119,7 +135,7 @@ export async function POST(request: NextRequest) {
       details: {
         fileSize: file.size,
         metadata,
-        uploadUrl: uploadResult.url,
+        uploadUrl: finalUploadResult.url,
         recordId: insertedRecord.id,
         totalTimeMs: totalTime,
         timestamp: new Date().toISOString(),

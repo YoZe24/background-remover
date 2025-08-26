@@ -87,20 +87,48 @@ export async function POST(request: NextRequest) {
     const imageProcessor = new ImageProcessor();
     const backgroundRemoval = new BackgroundRemovalService();
     
-    // Process the image
-    const result = await imageProcessor.processImage(
+    // Process the image (get processed data)
+    const processingResult = await imageProcessor.processImage(
       buffer,
       imageId,
       (buffer) => backgroundRemoval.removeBackground(buffer)
     );
+    
+    // Upload the processed image
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('processed-images')
+      .upload(processingResult.uploadData.filePath, processingResult.processedBuffer, {
+        contentType: processingResult.uploadData.contentType,
+        upsert: false,
+      });
+    
+    if (uploadError) {
+      throw new Error(`Upload failed: ${uploadError.message}`);
+    }
+    
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('processed-images')
+      .getPublicUrl(uploadData.path);
+    
+    // Update database to completed
+    await supabase
+      .from('processed_images')
+      .update({
+        status: 'completed',
+        processed_url: publicUrl,
+        processing_time_ms: processingResult.processingTimeMs,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', imageId);
     
     console.log(`✅ [Process] Successfully processed image ${imageId}`);
     
     return NextResponse.json({
       id: imageId,
       status: 'completed',
-      processedUrl: result.processedUrl,
-      processingTimeMs: result.processingTimeMs,
+      processedUrl: publicUrl,
+      processingTimeMs: processingResult.processingTimeMs,
       message: 'Image processed successfully'
     });
     
