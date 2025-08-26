@@ -54,12 +54,12 @@ export async function POST(request: NextRequest) {
     const testRecord = {
       original_filename: file.name,
       original_url: uploadResult.url,
-      processed_url: null,
+      processed_url: '',
       status: 'pending' as const,
-      error_message: null,
+      error_message: '',
       file_size: file.size,
       dimensions: metadata,
-      processing_time_ms: null,
+      processing_time_ms: 0,
       user_session_id: 'debug-test',
       expires_at: new Date(Date.now() + 60000).toISOString(), // 1 minute expiry
     };
