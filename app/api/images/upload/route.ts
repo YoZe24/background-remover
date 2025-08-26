@@ -116,23 +116,112 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Start background processing
-    console.log(`🚀 [Upload] Starting background processing for ${data.id}`);
+    // Process EVERYTHING synchronously before returning response
+    console.log(`🚀 [Upload] Starting SYNCHRONOUS processing for ${data.id}`);
     
-    // Start processing in background (but keep execution context alive)
-    processImageInBackground(data.id, buffer, imageProcessor, backgroundRemoval, supabase)
-      .catch(error => {
-        console.error(`❌ [Upload] Background processing failed for ${data.id}:`, error);
+    try {
+      // Step 1: Update status to processing
+      console.log(`📝 [Upload] Updating status to 'processing' for ${data.id}`);
+      const { error: statusError } = await supabase
+        .from('processed_images')
+        .update({
+          status: 'processing',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', data.id);
+      
+      if (statusError) {
+        throw new Error(`Failed to update status: ${statusError.message}`);
+      }
+      
+      console.log(`✅ [Upload] Status updated to processing for ${data.id}`);
+      
+      // Step 2: Process image (ImageProcessor returns data, no external calls)
+      console.log(`🔄 [Upload] Starting image processing for ${data.id}`);
+      const processingResult = await imageProcessor.processImage(
+        buffer,
+        data.id,
+        (buffer) => backgroundRemoval.removeBackground(buffer)
+      );
+      
+      console.log(`✅ [Upload] Image processing completed for ${data.id}`);
+      
+      // Step 3: Upload processed image
+      console.log(`☁️ [Upload] Uploading processed image for ${data.id}`);
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('processed-images')
+        .upload(processingResult.uploadData.filePath, processingResult.processedBuffer, {
+          contentType: processingResult.uploadData.contentType,
+          upsert: false,
+        });
+      
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('processed-images')
+        .getPublicUrl(uploadData.path);
+      
+      console.log(`✅ [Upload] Upload completed for ${data.id}: ${publicUrl}`);
+      
+      // Step 4: Update to completed
+      console.log(`📝 [Upload] Updating status to 'completed' for ${data.id}`);
+      const { error: completedError } = await supabase
+        .from('processed_images')
+        .update({
+          status: 'completed',
+          processed_url: publicUrl,
+          processing_time_ms: processingResult.processingTimeMs,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', data.id);
+      
+      if (completedError) {
+        console.error(`❌ [Upload] Failed to update to completed: ${completedError.message}`);
+        // Continue anyway, processing succeeded
+      }
+      
+      console.log(`🎉 [Upload] Successfully processed image ${data.id} - returning completed response`);
+      
+      // Return response with completed processing
+      return NextResponse.json({
+        id: data.id,
+        status: 'completed',
+        message: 'Image uploaded and processed successfully.',
+        originalUrl,
+        processedUrl: publicUrl,
+        sessionId,
+        processingTimeMs: processingResult.processingTimeMs,
       });
-
-    // Return immediate response
-    return NextResponse.json({
-      id: data.id,
-      status: 'pending',
-      message: 'Image uploaded successfully. Processing started.',
-      originalUrl,
-      sessionId,
-    });
+      
+    } catch (error) {
+      console.error(`❌ [Upload] Synchronous processing failed for ${data.id}:`, error);
+      
+      // Update to failed status
+      try {
+        await supabase
+          .from('processed_images')
+          .update({
+            status: 'failed',
+            error_message: error instanceof Error ? error.message : 'Processing failed',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', data.id);
+      } catch (updateError) {
+        console.error(`❌ [Upload] Failed to update failed status: ${updateError}`);
+      }
+      
+      return NextResponse.json({
+        id: data.id,
+        status: 'failed',
+        message: 'Image uploaded but processing failed.',
+        originalUrl,
+        sessionId,
+        error: error instanceof Error ? error.message : 'Processing failed',
+      });
+    }
 
   } catch (error) {
     console.error('Upload error:', error);
@@ -145,104 +234,4 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Process image in background with ALL Supabase calls in route handler
- */
-async function processImageInBackground(
-  imageId: string,
-  originalBuffer: Buffer,
-  imageProcessor: ImageProcessor,
-  backgroundRemoval: BackgroundRemovalService,
-  supabase: any
-) {
-  const startTime = Date.now();
-  console.log(`🎨 [Background] Starting background processing for image ${imageId} (buffer size: ${originalBuffer.length} bytes)`);
-  
-  try {
-    // Step 1: Update status to processing (Supabase call in route)
-    console.log(`📝 [Background] Updating status to 'processing' for ${imageId}`);
-    const { error: statusError } = await supabase
-      .from('processed_images')
-      .update({
-        status: 'processing',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', imageId);
-    
-    if (statusError) {
-      throw new Error(`Failed to update status: ${statusError.message}`);
-    }
-    
-    console.log(`✅ [Background] Status updated to processing for ${imageId}`);
-    
-    // Step 2: Process image (ImageProcessor returns data, no external calls)
-    console.log(`🔄 [Background] Starting image processing for ${imageId}`);
-    const processingResult = await imageProcessor.processImage(
-      originalBuffer,
-      imageId,
-      (buffer) => backgroundRemoval.removeBackground(buffer)
-    );
-    
-    console.log(`✅ [Background] Image processing completed for ${imageId}`);
-    
-    // Step 3: Upload processed image (Supabase call in route)
-    console.log(`☁️ [Background] Uploading processed image for ${imageId}`);
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('processed-images')
-      .upload(processingResult.uploadData.filePath, processingResult.processedBuffer, {
-        contentType: processingResult.uploadData.contentType,
-        upsert: false,
-      });
-    
-    if (uploadError) {
-      throw new Error(`Upload failed: ${uploadError.message}`);
-    }
-    
-    // Get public URL (Supabase call in route)
-    const { data: { publicUrl } } = supabase.storage
-      .from('processed-images')
-      .getPublicUrl(uploadData.path);
-    
-    console.log(`✅ [Background] Upload completed for ${imageId}: ${publicUrl}`);
-    
-    // Step 4: Update to completed (Supabase call in route)
-    console.log(`📝 [Background] Updating status to 'completed' for ${imageId}`);
-    const { error: completedError } = await supabase
-      .from('processed_images')
-      .update({
-        status: 'completed',
-        processed_url: publicUrl,
-        processing_time_ms: processingResult.processingTimeMs,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', imageId);
-    
-    if (completedError) {
-      console.error(`❌ [Background] Failed to update to completed: ${completedError.message}`);
-      // Continue anyway, processing succeeded
-    }
-    
-    const totalTime = Date.now() - startTime;
-    console.log(`🎉 [Background] Successfully processed image ${imageId} in ${totalTime}ms`);
-    
-  } catch (error) {
-    const totalTime = Date.now() - startTime;
-    console.error(`❌ [Background] Failed to process image ${imageId} after ${totalTime}ms:`, error);
-    
-    // Update to failed status (Supabase call in route)
-    try {
-      await supabase
-        .from('processed_images')
-        .update({
-          status: 'failed',
-          error_message: error instanceof Error ? error.message : 'Processing failed',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', imageId);
-    } catch (updateError) {
-      console.error(`❌ [Background] Failed to update failed status: ${updateError}`);
-    }
-    
-    throw error;
-  }
-}
+// All processing is now SYNCHRONOUS - no background processing function needed
