@@ -3,6 +3,55 @@
 import HeaderSimple from '@/components/HeaderSimple';
 import { BackgroundRemover } from '@/features/backgroundRemover';
 
+// Custom CTA section
+const CallToAction = () => {
+  return (
+    <section className="py-20 px-4 bg-base-50">
+      <div className="max-w-4xl mx-auto text-center">
+        <div className="bg-base-100 rounded-3xl p-8 md:p-12 shadow-2xl border border-base-300">
+          <h2 className="text-4xl md:text-5xl font-bold mb-6">
+            Ready to remove backgrounds for free?
+          </h2>
+          <p className="text-xl text-base-content/70 mb-8 max-w-2xl mx-auto">
+            Join thousands of users who save hours every week with our AI-powered background removal tool
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-8">
+            <div className="flex items-center gap-2 text-base-content/60">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>No signup required</span>
+            </div>
+            <div className="flex items-center gap-2 text-base-content/60">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>100% free to use</span>
+            </div>
+            <div className="flex items-center gap-2 text-base-content/60">
+              <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+              <span>Privacy protected</span>
+            </div>
+          </div>
+
+          <button 
+            className="btn btn-primary btn-lg text-lg px-8 py-4 rounded-xl hover:scale-105 transition-transform duration-300 shadow-lg"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            Start Removing Backgrounds Now
+            <svg className="w-5 h-5 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+};
+
 export default function Page() {
   return (
     <>
@@ -60,11 +109,14 @@ export default function Page() {
                     <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
                   </svg>
                 </div>
-                <span className="font-semibold">Secure & Private</span>
-                <span className="text-base-content/60 text-center">Your images are automatically deleted after 24 hours</span>
+                <span className="font-semibold">Secure</span>
+                <span className="text-base-content/60 text-center">Your images are securely stored</span>
               </div>
             </div>
         </section>
+
+        {/* Call to Action */}
+        <CallToAction />
       </main>
 
       <footer className="bg-base-200 py-8 px-4">
@@ -81,15 +133,14 @@ export default function Page() {
             </div>
             <span className="font-semibold">Background Remover</span>
           </div>
-          <p className="text-sm text-base-content/70">
-            Made with ❤️ using Next.js, Supabase, and AI
-          </p>
           <div className="flex justify-center gap-4 text-sm">
             <span>Free to use</span>
             <span>•</span>
-            <span>No registration required</span>
+            <span>No signup required</span>
             <span>•</span>
-            <span>Images auto-deleted after 24h</span>
+            <span>100% free to use</span>
+            <span>•</span>
+            <span>Privacy protected</span>
           </div>
         </div>
       </footer>
