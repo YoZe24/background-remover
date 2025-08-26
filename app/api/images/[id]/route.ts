@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient, createServiceClient } from '@/libs/supabase/server';
+import { createServiceClient } from '@/libs/supabase/server';
 
 export async function GET(
   request: NextRequest,
@@ -7,6 +7,7 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    console.log(`🔍 [Image API] GET request for image ID: ${id}`);
 
     if (!id) {
       return NextResponse.json(
@@ -15,7 +16,8 @@ export async function GET(
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceClient(); // Use service client for consistent access
+    console.log(`🔧 [Image API] Service client created for ${id}`);
     
     const { data, error } = await supabase
       .from('processed_images')
@@ -24,11 +26,17 @@ export async function GET(
       .single();
 
     if (error || !data) {
+      console.error(`❌ [Image API] Image not found for ${id}:`, error);
       return NextResponse.json(
         { error: 'Image not found' },
         { status: 404 }
       );
     }
+
+    console.log(`✅ [Image API] Image data found for ${id}:`, { 
+      status: data.status, 
+      hasProcessedUrl: !!data.processed_url 
+    });
 
     // Return processing status and results
     return NextResponse.json({

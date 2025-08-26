@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/libs/supabase/server';
+import { createServiceClient } from '@/libs/supabase/server';
 
 export async function GET(
   request: NextRequest,
@@ -15,7 +15,7 @@ export async function GET(
       );
     }
 
-    const supabase = await createClient();
+    const supabase = createServiceClient(); // Use service client for consistent access
     
     const { data, error } = await supabase
       .from('processed_images')
