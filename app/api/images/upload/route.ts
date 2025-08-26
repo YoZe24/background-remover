@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
-import { createClient, createServiceClient } from '@/libs/supabase/server';
+import { createServiceClient } from '@/libs/supabase/server';
 import { ImageProcessor } from '@/features/backgroundRemover/libs/image-processor';
 import { BackgroundRemovalService } from '@/features/backgroundRemover/libs/background-removal';
 import type { ProcessedImage } from '@/features/backgroundRemover/types/image';
 
 // Configure maximum file size for uploads (50MB)
-export const maxDuration = 30; // 30 seconds max execution time
+export const maxDuration = 60; // 60 seconds max execution time for Vercel Pro
+export const runtime = 'nodejs'; // Ensure we're using Node.js runtime
 
 export async function POST(request: NextRequest) {
   try {

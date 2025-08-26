@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/libs/supabase/server';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('🔍 [Debug] Starting Supabase connection test...');
     
@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const supabase = createServiceClient();
     
     // Test basic connection with a simple query
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from('processed_images')
       .select('count')
       .limit(1);

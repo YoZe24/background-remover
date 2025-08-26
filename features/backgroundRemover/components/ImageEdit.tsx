@@ -61,6 +61,8 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
         const response = await fetch(`/api/images/${imageId}`);
         const data = await response.json();
 
+        console.log('🔍 [ImageEdit] Image data:', data);
+        console.log('🔍 [ImageEdit] Image response:', response);
         if (!response.ok) {
           throw new Error(data.error || 'Failed to fetch image status');
         }

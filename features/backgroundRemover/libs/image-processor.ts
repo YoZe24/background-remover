@@ -234,42 +234,53 @@ export class ImageProcessor {
     const startTime = Date.now();
     console.log(`📝 [ImageProcessor] Starting DB update for ${id} to status: ${status}`);
     
-    const supabase = createServiceClient(); // Use service client for database updates
+    // Create a fresh service client for each operation to avoid connection pooling issues
+    const supabase = createServiceClient();
     console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
-    const controller = new AbortController();
-
-    // Add timeout to the database operation
-    const updatePromise = supabase
-      .from('processed_images')
-      .update({
+    
+    // Use Promise.race with timeout for better control
+    const updateOperation = async () => {
+      console.log(`🔄 [ImageProcessor] Executing DB update for ${id}...`);
+      
+      const updateData = {
         status,
         updated_at: new Date().toISOString(),
         ...updates,
-      })
-      .eq('id', id);
-
-    const timeout = setTimeout(() => {
-      controller.abort();
-    }, 15000);
+      };
+      
+      console.log(`📊 [ImageProcessor] Update data for ${id}:`, updateData);
+      
+      const { data, error } = await supabase
+        .from('processed_images')
+        .update(updateData)
+        .eq('id', id)
+        .select('id, status');
+      
+      if (error) {
+        console.error(`❌ [ImageProcessor] DB update error for ${id}:`, error);
+        throw new Error(`DB update failed for ${id}: ${error.message}`);
+      }
+      
+      console.log(`📋 [ImageProcessor] DB update result for ${id}:`, data);
+      return data;
+    };
+    
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        reject(new Error(`Database update timeout after 10 seconds for ${id}`));
+      }, 10000);
+    });
     
     try {
-      console.log(`🔄 [ImageProcessor] Executing DB update for ${id}...`);
-      const { error: updateError } = await updatePromise;
-      
-      if (updateError) {
-        console.error(`❌ [ImageProcessor] DB update error for ${id}:`, updateError);
-        throw new Error(`DB update failed for ${id}: ${updateError.message}`);
-      }
+      await Promise.race([updateOperation(), timeoutPromise]);
       
       const endTime = Date.now();
       console.log(`✅ [ImageProcessor] DB update completed for ${id} in ${endTime - startTime}ms`);
     } catch (err) {
-      console.error(`❌ [ImageProcessor] DB update exception for ${id}:`, err);
+      const endTime = Date.now();
+      console.error(`❌ [ImageProcessor] DB update failed for ${id} after ${endTime - startTime}ms:`, err);
       throw new Error(`DB update failed for ${id}: ${(err as Error).message}`);
-    } finally {
-      clearTimeout(timeout);
     }
-
   }
 
   /**

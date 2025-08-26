@@ -40,18 +40,41 @@ export function createServiceClient() {
     throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
   }
   
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!, // Service role key bypasses RLS
-    {
-      cookies: {
-        getAll() {
-          return [];
+  console.log('🔧 [Server] Environment variables validated');
+  
+  try {
+    const client = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!, // Service role key bypasses RLS
+      {
+        cookies: {
+          getAll() {
+            return [];
+          },
+          setAll() {
+            // No-op for service client
+          },
         },
-        setAll() {
-          // No-op for service client
+        // Add configuration for better serverless compatibility
+        auth: {
+          persistSession: false, // Don't persist sessions in serverless
         },
-      },
-    }
-  );
+        global: {
+          headers: {
+            'X-Client-Info': 'supabase-js-node', // Help identify client type
+          },
+        },
+        // Configure connection pooling for serverless
+        db: {
+          schema: 'public',
+        },
+      }
+    );
+    
+    console.log('✅ [Server] Service client created successfully');
+    return client;
+  } catch (error) {
+    console.error('❌ [Server] Failed to create service client:', error);
+    throw error;
+  }
 }
