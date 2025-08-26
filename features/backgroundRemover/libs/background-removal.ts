@@ -139,7 +139,7 @@ export class BackgroundRemovalService {
     console.log(`🎯 [BackgroundRemoval] Starting with service: ${serviceInfo.service}, hasApiKey: ${serviceInfo.hasApiKey}, isProduction: ${serviceInfo.isProduction}`);
     
     // TODO: Remove this after testing
-    // return await this.mockBackgroundRemoval(imageBuffer);
+    return await this.mockBackgroundRemoval(imageBuffer);
     try {
       switch (this.config.service) {
         case 'remove.bg':

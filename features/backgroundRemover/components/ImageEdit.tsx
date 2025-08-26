@@ -16,6 +16,7 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Initialize background deletion hook
   const { deleteInBackground } = useBackgroundDeletion({
@@ -146,6 +147,36 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
       toast.success('Share link copied to clipboard!');
     } catch {
       toast.error('Failed to copy link to clipboard');
+    }
+  };
+
+  const handleProcessImage = async () => {
+    if (!imageData?.id || isProcessing) return;
+
+    setIsProcessing(true);
+    
+    try {
+      const response = await fetch(`/api/images/${imageData.id}/process`, {
+        method: 'POST',
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to start processing');
+      }
+      
+      toast.success('Processing started!');
+      
+      // Immediately update the status to processing for better UX
+      setImageData(prev => prev ? { ...prev, status: 'processing' } : null);
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start processing';
+      toast.error(errorMessage);
+      console.error('Processing error:', error);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -335,6 +366,16 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
                     </span>
                   )}
                 </div>
+                
+                {/* Auto-processing indicator for pending images */}
+                {imageData.status === 'pending' && (
+                  <div className="bg-info/10 border border-info/20 rounded-lg p-3">
+                    <div className="flex items-center gap-2 text-info">
+                      <span className="loading loading-spinner loading-xs"></span>
+                      <span className="text-sm font-medium">Starting processing...</span>
+                    </div>
+                  </div>
+                )}
               </div>
 
 

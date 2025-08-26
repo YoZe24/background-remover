@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient } from '@/libs/supabase/server';
 import { ImageProcessor } from '@/features/backgroundRemover/libs/image-processor';
-import { BackgroundRemovalService } from '@/features/backgroundRemover/libs/background-removal';
 import type { ProcessedImage } from '@/features/backgroundRemover/types/image';
 
 // Configure maximum file size for uploads (50MB)
@@ -22,9 +21,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize services
+    // Initialize image processor
     const imageProcessor = new ImageProcessor();
-    const backgroundRemoval = new BackgroundRemovalService();
 
     // Validate file
     const validation = imageProcessor.validateFile(file);
@@ -35,26 +33,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate background removal service
-    const serviceValidation = backgroundRemoval.validateConfig();
-    if (!serviceValidation.valid) {
-      return NextResponse.json(
-        { error: `Service configuration error: ${serviceValidation.errors.join(', ')}` },
-        { status: 500 }
-      );
-    }
-
     // Convert file to buffer
     const buffer = Buffer.from(await file.arrayBuffer());
+    console.log(`📝 [Upload] Processing file: ${file.name} (${file.type}, ${file.size} bytes)`);
 
     // Get image metadata
     const metadata = await imageProcessor.getImageMetadata(buffer);
+    console.log(`📊 [Upload] Image metadata:`, { 
+      width: metadata.width, 
+      height: metadata.height, 
+      format: metadata.format, 
+      size: metadata.size 
+    });
 
     // Upload original image to storage
-    const { url: originalUrl, path: originalPath } = await imageProcessor.uploadToStorage(
+    const { url: originalUrl, path: originalPath } = await uploadOriginalImageToStorage(
       buffer,
-      file.name,
-      'original-images'
+      file.name
     );
 
     // Create database record
@@ -84,7 +79,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error('Database insert error:', error);
       // Cleanup uploaded file
-      await imageProcessor.deleteFromStorage(originalPath, 'original-images');
+      await deleteOriginalImageFromStorage(originalPath);
       
       return NextResponse.json(
         { error: 'Failed to create image record' },
@@ -92,14 +87,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Start background processing (fire and forget)
-    processImageInBackground(data.id, buffer, imageProcessor, backgroundRemoval);
-
     // Return immediate response with tracking ID
     return NextResponse.json({
       id: data.id,
       status: 'pending',
-      message: 'Image uploaded successfully. Processing started.',
+      message: 'Image uploaded successfully. Ready for processing.',
       originalUrl,
       sessionId,
     });
@@ -116,46 +108,68 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Process image in background (async)
+ * Upload original image to Supabase storage
  */
-async function processImageInBackground(
-  imageId: string,
-  originalBuffer: Buffer,
-  imageProcessor: ImageProcessor,
-  backgroundRemoval: BackgroundRemovalService
-) {
-  const startTime = Date.now();
-  console.log(`🎨 [Upload] Starting background processing for image ${imageId} (buffer size: ${originalBuffer.length} bytes)`);
-  
-  try {
-    // Log service configuration
-    const serviceInfo = backgroundRemoval.getServiceInfo();
-    console.log(`🔧 [Upload] Service config for ${imageId}:`, serviceInfo);
-    
-    await imageProcessor.processImage(
-      originalBuffer,
-      imageId,
-      (buffer) => {
-        console.log(`🔄 [Upload] Calling background removal for ${imageId}...`);
-        return backgroundRemoval.removeBackground(buffer);
-      }
-    );
+async function uploadOriginalImageToStorage(
+  buffer: Buffer,
+  originalFilename: string
+): Promise<{ url: string; path: string }> {
+  const supabase = await createClient();
+  const fileExt = originalFilename.split('.').pop()?.toLowerCase() || 'png';
+  const fileName = `${uuidv4()}.${fileExt}`;
+  const filePath = `${Date.now()}-${fileName}`;
 
-    const totalTime = Date.now() - startTime;
-    console.log(`✅ [Upload] Successfully processed image ${imageId} in ${totalTime}ms`);
-  } catch (error) {
-    const totalTime = Date.now() - startTime;
-    console.error(`❌ [Upload] Failed to process image ${imageId} after ${totalTime}ms:`, error);
-    
-    // Additional error context
-    if (error instanceof Error) {
-      console.error(`❌ [Upload] Error details for ${imageId}:`, {
-        name: error.name,
-        message: error.message,
-        stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-      });
+  // Map file extensions to proper MIME types
+  const getMimeType = (ext: string): string => {
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      default:
+        return 'image/png'; // fallback
     }
-    
-    // Error handling is done within processImage method
+  };
+
+  const contentType = getMimeType(fileExt);
+  console.log(`☁️ [Storage] Uploading: ${filePath} (ext: ${fileExt}, contentType: ${contentType})`);
+
+  const { data, error } = await supabase.storage
+    .from('original-images')
+    .upload(filePath, buffer, {
+      contentType,
+      upsert: false,
+    });
+
+  if (error) {
+    throw new Error(`Failed to upload to storage: ${error.message}`);
+  }
+
+  // Get public URL
+  const { data: { publicUrl } } = supabase.storage
+    .from('original-images')
+    .getPublicUrl(data.path);
+
+  return {
+    url: publicUrl,
+    path: data.path,
+  };
+}
+
+/**
+ * Delete original image from storage
+ */
+async function deleteOriginalImageFromStorage(path: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.storage.from('original-images').remove([path]);
+
+  if (error) {
+    console.error(`Failed to delete file from storage: ${error.message}`);
+    // Don't throw error for cleanup operations
   }
 }
