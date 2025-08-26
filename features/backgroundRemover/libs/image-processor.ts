@@ -2,7 +2,6 @@ import sharp from 'sharp';
 import { v4 as uuidv4 } from 'uuid';
 import { createClient, createServiceClient } from '@/libs/supabase/server';
 import type { ProcessedImage, ProcessingConfig, BackgroundRemovalConfig } from '@/features/backgroundRemover/types/image';
-import { createActualClient } from '@/libs/supabase/test';
 
 // Default processing configuration
 const DEFAULT_CONFIG: ProcessingConfig = {
@@ -166,34 +165,49 @@ export class ImageProcessor {
     filename: string,
     bucket: 'original-images' | 'processed-images'
   ): Promise<{ url: string; path: string }> {
-    console.log(`🔧 [ImageProcessor] Uploading to storage for ${filename} in bucket ${bucket}`);
+    const startTime = Date.now();
+    console.log(`🔧 [ImageProcessor] Starting upload to storage for ${filename} in bucket ${bucket} (buffer size: ${buffer.length})`);
+    
     const supabase = createServiceClient(); // Use service client for uploads
     const fileExt = this.config.outputFormat;
     const fileName = `${uuidv4()}.${fileExt}`;
     const filePath = `${Date.now()}-${fileName}`;
 
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(filePath, buffer, {
-        contentType: `image/${fileExt}`,
-        upsert: false,
-      });
+    console.log(`📁 [ImageProcessor] Generated file path: ${filePath}`);
 
-    console.log(`🔧 [ImageProcessor] Upload completed for ${filename} in bucket ${bucket}`);
+    try {
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .upload(filePath, buffer, {
+          contentType: `image/${fileExt}`,
+          upsert: false,
+        });
 
-    if (error) {
-      throw new Error(`Failed to upload to storage: ${error.message}`);
+      const uploadTime = Date.now() - startTime;
+      console.log(`✅ [ImageProcessor] Upload completed for ${filename} in bucket ${bucket} in ${uploadTime}ms`);
+
+      if (error) {
+        console.error(`❌ [ImageProcessor] Upload error for ${filename}:`, error);
+        throw new Error(`Failed to upload to storage: ${error.message}`);
+      }
+
+      // Get public URL
+      console.log(`🔗 [ImageProcessor] Getting public URL for ${data.path}`);
+      const { data: { publicUrl } } = supabase.storage
+        .from(bucket)
+        .getPublicUrl(data.path);
+
+      console.log(`🔗 [ImageProcessor] Public URL generated: ${publicUrl}`);
+
+      return {
+        url: publicUrl,
+        path: data.path,
+      };
+    } catch (error) {
+      const uploadTime = Date.now() - startTime;
+      console.error(`❌ [ImageProcessor] Upload failed for ${filename} after ${uploadTime}ms:`, error);
+      throw error;
     }
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from(bucket)
-      .getPublicUrl(data.path);
-
-    return {
-      url: publicUrl,
-      path: data.path,
-    };
   }
 
   /**
@@ -220,7 +234,7 @@ export class ImageProcessor {
     const startTime = Date.now();
     console.log(`📝 [ImageProcessor] Starting DB update for ${id} to status: ${status}`);
     
-    const supabase = createActualClient(); // Use service client for database updates
+    const supabase = createServiceClient(); // Use service client for database updates
     console.log(`🔌 [ImageProcessor] Service client created for ${id}`);
     const controller = new AbortController();
 
@@ -232,21 +246,29 @@ export class ImageProcessor {
         updated_at: new Date().toISOString(),
         ...updates,
       })
-      .eq('id', id)
-      .abortSignal?.(controller.signal); // only works on latest supabase-js (>=2.39)
+      .eq('id', id);
 
-      const timeout = setTimeout(() => {
-        controller.abort();
-      }, 15000);
+    const timeout = setTimeout(() => {
+      controller.abort();
+    }, 15000);
     
-
-      try {
-        await updatePromise;
-      } catch (err) {
-        throw new Error(`DB update failed for ${id}: ${(err as Error).message}`);
-      } finally {
-        clearTimeout(timeout);
+    try {
+      console.log(`🔄 [ImageProcessor] Executing DB update for ${id}...`);
+      const { error: updateError } = await updatePromise;
+      
+      if (updateError) {
+        console.error(`❌ [ImageProcessor] DB update error for ${id}:`, updateError);
+        throw new Error(`DB update failed for ${id}: ${updateError.message}`);
       }
+      
+      const endTime = Date.now();
+      console.log(`✅ [ImageProcessor] DB update completed for ${id} in ${endTime - startTime}ms`);
+    } catch (err) {
+      console.error(`❌ [ImageProcessor] DB update exception for ${id}:`, err);
+      throw new Error(`DB update failed for ${id}: ${(err as Error).message}`);
+    } finally {
+      clearTimeout(timeout);
+    }
 
   }
 
@@ -266,48 +288,10 @@ export class ImageProcessor {
       console.log(`📝 [ImageProcessor] Updating status to 'processing' for ${imageId}`);
       await this.updateProcessingStatus(imageId, 'processing');
 
-      // Step 1: Resize if needed
-      console.log(`📏 [ImageProcessor] Step 1: Resizing if needed for ${imageId}`);
-      const resizeStart = Date.now();
+      console.log(`🔧 [ImageProcessor] SIMPLIFIED PIPELINE - Only uploading for debugging`);
       
-      // Add memory logging
-      const memUsageBefore = process.memoryUsage();
-      console.log(`💾 [ImageProcessor] Memory before resize: ${Math.round(memUsageBefore.heapUsed / 1024 / 1024)}MB heap, ${Math.round(memUsageBefore.rss / 1024 / 1024)}MB RSS`);
-      
-      // Add timeout to resize operation
-      // const resizePromise = this.resizeIfNeeded(originalBuffer);
-      // const timeoutPromise = new Promise((_, reject) => {
-      //   setTimeout(() => {
-      //     reject(new Error(`Resize operation timed out after 30 seconds for ${imageId}`));
-      //   }, 30000);
-      // });
-      
-      // const resizedBuffer = await Promise.race([resizePromise, timeoutPromise]) as Buffer;
-      
-      // const memUsageAfter = process.memoryUsage();
-      // console.log(`💾 [ImageProcessor] Memory after resize: ${Math.round(memUsageAfter.heapUsed / 1024 / 1024)}MB heap, ${Math.round(memUsageAfter.rss / 1024 / 1024)}MB RSS`);
-      // console.log(`📏 [ImageProcessor] Resize completed for ${imageId} in ${Date.now() - resizeStart}ms (${originalBuffer.length} -> ${resizedBuffer.length} bytes)`);
-
-      // Step 2: Remove background
-      // console.log(`🎭 [ImageProcessor] Step 2: Removing background for ${imageId}`);
-      // const bgRemovalStart = Date.now();
-      // const noBgBuffer = await removeBackgroundFn(originalBuffer);
-      // console.log(`🎭 [ImageProcessor] Background removal completed for ${imageId} in ${Date.now() - bgRemovalStart}ms (${originalBuffer.length} -> ${noBgBuffer.length} bytes)`);
-
-      // // Step 3: Flip horizontally
-      // console.log(`🔄 [ImageProcessor] Step 3: Flipping horizontally for ${imageId}`);
-      // const flipStart = Date.now();
-      // const flippedBuffer = await this.flipHorizontally(originalBuffer);
-      // console.log(`🔄 [ImageProcessor] Flip completed for ${imageId} in ${Date.now() - flipStart}ms`);
-
-      // Step 4: Convert to output format
-      // console.log(`🔧 [ImageProcessor] Step 4: Converting to output format for ${imageId}`);
-      // const convertStart = Date.now();
-      // const finalBuffer = await this.convertToOutputFormat(flippedBuffer);
-      // console.log(`🔧 [ImageProcessor] Format conversion completed for ${imageId} in ${Date.now() - convertStart}ms`);
-
-      // Step 5: Upload processed image
-      console.log(`☁️ [ImageProcessor] Step 5: Uploading processed image for ${imageId}`);
+      // Step 1: Upload processed image (simplified for debugging)
+      console.log(`☁️ [ImageProcessor] Step 1: Uploading processed image for ${imageId}`);
       const uploadStart = Date.now();
       const { url: processedUrl } = await this.uploadToStorage(
         originalBuffer,
@@ -318,14 +302,14 @@ export class ImageProcessor {
 
       const processingTimeMs = Date.now() - startTime;
 
-      // Step 6: Update status to completed
-      console.log(`✅ [ImageProcessor] Step 6: Updating status to 'completed' for ${imageId}`);
+      // Step 2: Update status to completed
+      console.log(`✅ [ImageProcessor] Step 2: Updating status to 'completed' for ${imageId}`);
       await this.updateProcessingStatus(imageId, 'completed', {
         processed_url: processedUrl,
         processing_time_ms: processingTimeMs,
       });
 
-      console.log(`🎉 [ImageProcessor] Complete pipeline finished for ${imageId} in ${processingTimeMs}ms`);
+      console.log(`🎉 [ImageProcessor] SIMPLIFIED pipeline finished for ${imageId} in ${processingTimeMs}ms`);
       return { processedUrl, processingTimeMs };
     } catch (error) {
       const processingTimeMs = Date.now() - startTime;
