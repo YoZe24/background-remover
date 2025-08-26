@@ -23,8 +23,10 @@ import {
   generateSampleImageUrl, 
   getAllSampleImageCombinations,
   AVAILABLE_CATEGORIES,
+  AVAILABLE_NUMBERS,
   type SampleImageOption,
-  getSampleImageByCategory as getRandomSampleImageByCategory
+  getSampleImageByCategory as getRandomSampleImageByCategory,
+  getSampleImageByCategoryAndNumber
 } from '@/features/backgroundRemover/utils/sample-image-generator';
 
 const ALL_SAMPLE_IMAGES = getAllSampleImageCombinations();
@@ -40,10 +42,10 @@ const convertToSampleImage = (option: SampleImageOption): SampleImage => ({
 
 // Select 4 diverse samples for the default display
 const SAMPLE_IMAGES: SampleImage[] = [
-  convertToSampleImage(getRandomSampleImageByCategory(AVAILABLE_CATEGORIES[0])),
-  convertToSampleImage(getRandomSampleImageByCategory(AVAILABLE_CATEGORIES[1])),
-  convertToSampleImage(getRandomSampleImageByCategory(AVAILABLE_CATEGORIES[2])),
-  convertToSampleImage(getRandomSampleImageByCategory(AVAILABLE_CATEGORIES[3])),
+  convertToSampleImage(getSampleImageByCategoryAndNumber(AVAILABLE_CATEGORIES[0], AVAILABLE_NUMBERS[0])),
+  convertToSampleImage(getSampleImageByCategoryAndNumber(AVAILABLE_CATEGORIES[1], AVAILABLE_NUMBERS[0])),
+  convertToSampleImage(getSampleImageByCategoryAndNumber(AVAILABLE_CATEGORIES[2], AVAILABLE_NUMBERS[0])),
+  convertToSampleImage(getSampleImageByCategoryAndNumber(AVAILABLE_CATEGORIES[3], AVAILABLE_NUMBERS[0])),
 ];
 
 // Export utility functions for external use

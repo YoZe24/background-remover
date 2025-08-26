@@ -57,6 +57,14 @@ export function getSampleImagesByCategory(category: Category): SampleImageOption
   }));
 }
 
+export function getSampleImageByCategoryAndNumber(category: Category, number: ImageNumber): SampleImageOption {
+  return {
+    category,
+    number,
+    url: generateSampleImageUrl(category, number)
+  };
+}
+
 export function getSampleImageByCategory(category: Category): SampleImageOption {
   const allImages = getSampleImagesByCategory(category);
   const randomIndex = Math.floor(Math.random() * allImages.length);
