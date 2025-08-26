@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       id: data.id,
       status: 'pending',
-      message: 'Image uploaded successfully. Ready for processing.',
+      message: 'Image uploaded successfully. Processing will start automatically.',
       originalUrl,
       sessionId,
     });

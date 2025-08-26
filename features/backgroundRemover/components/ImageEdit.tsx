@@ -104,6 +104,45 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
     };
   }, [imageId]);
 
+  // Auto-trigger processing for pending images
+  useEffect(() => {
+    const triggerProcessing = async () => {
+      if (imageData?.status === 'pending' && !isProcessing && !imageId.startsWith('temp_')) {
+        console.log(`🔄 [ImageEdit] Auto-triggering processing for ${imageId}`);
+        
+        // Immediately update the status to processing for seamless UX
+        setImageData(prev => prev ? { ...prev, status: 'processing' } : null);
+        setIsProcessing(true);
+        
+        try {
+          const response = await fetch(`/api/images/${imageId}/process`, {
+            method: 'POST',
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to start processing');
+          }
+          
+          console.log(`✅ [ImageEdit] Auto-processing started for ${imageId}`);
+          
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to start processing';
+          toast.error(`Auto-processing failed: ${errorMessage}`);
+          console.error('Auto-processing error:', error);
+          
+          // Revert status back to pending on error
+          setImageData(prev => prev ? { ...prev, status: 'pending' } : null);
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+    };
+
+    triggerProcessing();
+  }, [imageData?.status, isProcessing, imageId]);
+
   const handleDelete = useCallback(() => {
     const confirmDelete = window.confirm('Are you sure you want to delete this image?');
     if (!confirmDelete) return;
@@ -150,35 +189,7 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
     }
   };
 
-  const handleProcessImage = async () => {
-    if (!imageData?.id || isProcessing) return;
 
-    setIsProcessing(true);
-    
-    try {
-      const response = await fetch(`/api/images/${imageData.id}/process`, {
-        method: 'POST',
-      });
-      
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to start processing');
-      }
-      
-      toast.success('Processing started!');
-      
-      // Immediately update the status to processing for better UX
-      setImageData(prev => prev ? { ...prev, status: 'processing' } : null);
-      
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start processing';
-      toast.error(errorMessage);
-      console.error('Processing error:', error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -367,15 +378,7 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
                   )}
                 </div>
                 
-                {/* Auto-processing indicator for pending images */}
-                {imageData.status === 'pending' && (
-                  <div className="bg-info/10 border border-info/20 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-info">
-                      <span className="loading loading-spinner loading-xs"></span>
-                      <span className="text-sm font-medium">Starting processing...</span>
-                    </div>
-                  </div>
-                )}
+
               </div>
 
 
