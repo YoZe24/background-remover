@@ -252,7 +252,12 @@ export class ImageProcessor {
       
       const { data, error } = await supabase
         .from('processed_images')
-        .update(updateData)
+        .update({
+          status: status,
+          processed_url: updates.processed_url || '',
+          processing_time_ms: Date.now() - startTime,
+          updated_at: new Date().toISOString(),
+        })
         .eq('id', id)
         .select('id, status');
       
