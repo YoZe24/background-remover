@@ -102,7 +102,7 @@ export function useImageUpload({
       const result = await uploadPromise;
       
       onUploadSuccess(result);
-      toast.success('Image uploaded successfully! Processing started...');
+      toast.success('Image uploaded successfully! Processing will start automatically.');
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to upload image';

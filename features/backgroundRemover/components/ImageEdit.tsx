@@ -16,6 +16,7 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Initialize background deletion hook
   const { deleteInBackground } = useBackgroundDeletion({
@@ -103,6 +104,45 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
     };
   }, [imageId]);
 
+  // Auto-trigger processing for pending images
+  useEffect(() => {
+    const triggerProcessing = async () => {
+      if (imageData?.status === 'pending' && !isProcessing && !imageId.startsWith('temp_')) {
+        console.log(`🔄 [ImageEdit] Auto-triggering processing for ${imageId}`);
+        
+        // Immediately update the status to processing for seamless UX
+        setImageData(prev => prev ? { ...prev, status: 'processing' } : null);
+        setIsProcessing(true);
+        
+        try {
+          const response = await fetch(`/api/images/${imageId}/process`, {
+            method: 'POST',
+          });
+          
+          const result = await response.json();
+          
+          if (!response.ok) {
+            throw new Error(result.error || 'Failed to start processing');
+          }
+          
+          console.log(`✅ [ImageEdit] Auto-processing started for ${imageId}`);
+          
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Failed to start processing';
+          toast.error(`Auto-processing failed: ${errorMessage}`);
+          console.error('Auto-processing error:', error);
+          
+          // Revert status back to pending on error
+          setImageData(prev => prev ? { ...prev, status: 'pending' } : null);
+        } finally {
+          setIsProcessing(false);
+        }
+      }
+    };
+
+    triggerProcessing();
+  }, [imageData?.status, isProcessing, imageId]);
+
   const handleDelete = useCallback(() => {
     const confirmDelete = window.confirm('Are you sure you want to delete this image?');
     if (!confirmDelete) return;
@@ -148,6 +188,8 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
       toast.error('Failed to copy link to clipboard');
     }
   };
+
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -335,6 +377,8 @@ export default function ImageEdit({ imageId, onDelete }: ImageEditProps) {
                     </span>
                   )}
                 </div>
+                
+
               </div>
 
 
